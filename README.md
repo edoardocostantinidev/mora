@@ -1,4 +1,4 @@
-![logo](https://github.com/edoardocostantinidev/moradb/raw/master/docs/images/logo.jpg)
+![logo](https://github.com/edoardocostantinidev/moradb/raw/master/docs/images/logo.png)
 
 # moradb
 
