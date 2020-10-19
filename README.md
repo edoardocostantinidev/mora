@@ -1,6 +1,5 @@
-![logo](https://github.com/edoardocostantinidev/moradb/raw/master/docs/images/logo.png)
+<img src="docs/images/logo.png" alt="drawing" width="180">
 
-# moradb
 
 moradb is an `event` based database capable of streaming future events to every client subscribed to the relative `category`.
 An `event` is a single piece of information stored in moradb, with some basic properties:
