@@ -1,3 +1,5 @@
+![alt text](https://github.com/edoardocostantinidev/moradb/blob/master/docs/images/lgo.jpg?raw=true)
+
 # moradb
 
 moradb is an `event` based database capable of streaming future events to every client subscribed to the relative `category`.
