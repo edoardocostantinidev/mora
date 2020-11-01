@@ -26,6 +26,6 @@ event = {
 moradb.schedule(event);
 ```
 moradb then proceeds to do the following:
-    
+
 1) Check if the `fireAt` time is contained inside the `TemporalQueue` time range, if so then it will place it in order inside it.
 2) Store the event inside a persistent database with a queued flag based upon the former step.
