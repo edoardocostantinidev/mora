@@ -1,8 +1,8 @@
 <img src="docs/images/logo.png" alt="drawing" width="180">
 
 
-moradb is an `event` store capable of streaming future events to every client subscribed to the relative `category`.
-An `event` is a single piece of information stored in moradb, with some basic properties:
+moraes is an `event` store capable of streaming future events to every client subscribed to the relative `category`.
+An `event` is a single piece of information stored in moraes, with some basic properties:
 - `id`, unique id
 - `category`, field that describe what category owns the event
 - `createdAt` timestamp defining when the event was created
@@ -23,9 +23,9 @@ event = {
     },
     name: "event"
 };
-moradb.schedule(event);
+moraes.schedule(event);
 ```
-moradb then proceeds to do the following:
+moraes then proceeds to do the following:
 
 1) Check if the `fireAt` time is contained inside the `TemporalQueue` time range, if so then it will place it in order inside it.
 2) Store the event inside a persistent database with a queued flag based upon the former step.
