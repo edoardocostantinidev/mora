@@ -1,7 +1,7 @@
 <img src="docs/images/logo.png" alt="drawing" width="180">
 
 
-moradb is an `event` based database capable of streaming future events to every client subscribed to the relative `category`.
+moradb is an `event` store capable of streaming future events to every client subscribed to the relative `category`.
 An `event` is a single piece of information stored in moradb, with some basic properties:
 - `id`, unique id
 - `category`, field that describe what category owns the event
