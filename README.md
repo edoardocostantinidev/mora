@@ -14,14 +14,14 @@ An `event` is a single piece of information stored in moraes, with some basic pr
 
 Clients connect to the database via a connection string, subsequently a client can schedule an event:
 ```json
-'event': {
-    'createdAt': 1603140122,
-    'fireAt': 1603140222,
-    'category': "categoryName",
-    'data': {
-        'field': "value"
+"event": {
+    "createdAt": 1603140122,
+    "fireAt": 1603140222,
+    "category": "categoryName",
+    "data": {
+        "field": "value"
     },
-    'name': "event"
+    "name": "event"
 };
 ```
 `moraes.schedule(event);`
