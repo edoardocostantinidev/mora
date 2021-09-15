@@ -1,83 +1,121 @@
-<mxfile host="65bd71144e" modified="2020-10-19T20:34:24.331Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.50.0 Chrome/83.0.4103.122 Electron/9.2.1 Safari/537.36" version="13.6.5" etag="ivjOyL8GEtEze1QNIFfY">
+<mxfile host="65bd71144e">
     <diagram id="rVW9Xq6m_tmSxOatVOXA" name="Page-1">
-        <mxGraphModel dx="1090" dy="811" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="2728" dy="2632" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="16" value="" style="group" vertex="1" connectable="0" parent="1">
-                    <mxGeometry x="330" y="60" width="140" height="80" as="geometry"/>
+                <mxCell id="39" value="Schedule Event" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="36" target="38">
+                    <mxGeometry y="10" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
                 </mxCell>
-                <mxCell id="6" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="16">
+                <mxCell id="41" value="Persist the Event" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="38" target="40">
+                    <mxGeometry x="0.3914" y="10" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="320" y="170"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="43" value="Notify temporal queues" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="38" target="42">
+                    <mxGeometry x="0.4223" y="-10" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="320" y="420"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="38" value="MoraDB.API" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="260" y="260" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="MoraDB.Database" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="140" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="390" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="44" value="Event Scheduling" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="90" width="210" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="54" value="MoraDB.Database" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="560" width="160" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="59" value="fill temporal queue with new events via range query" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="55" target="54">
+                    <mxGeometry y="20" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="55" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="560" width="160" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="56" value="Event Queueing" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" vertex="1" parent="1">
+                    <mxGeometry x="30" y="500" width="210" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="for each category created there's a temporal queue. Each temporal queue can queue up to MAX_QUEUE_SIZE events (default 1000)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="655" width="160" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="62" value="there's no need to poll because a temporal queue will always be notified whenever a new event gets scheduled." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="240" y="650" width="160" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" value="send to dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="65" target="79">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="380" y="900" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="65" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="580" y="860" width="160" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="66" value="Event Dispatching" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="780" width="210" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="69" value="" style="group" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="10" y="230" width="150" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="" style="group" vertex="1" connectable="0" parent="69">
+                    <mxGeometry width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="33">
                     <mxGeometry x="10" y="10" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="5" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="16">
+                <mxCell id="35" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="33">
                     <mxGeometry x="20" y="20" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=blockThin;startFill=1;" edge="1" parent="1" source="2" target="3">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="36" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#60a917;strokeColor=#2D7600;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="69">
+                    <mxGeometry x="30" y="30" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="2" target="23">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="37" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="69">
+                    <mxGeometry x="130" y="40" width="10" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="2" value="Network&lt;br&gt;Stack" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-                    <mxGeometry x="360" y="210" width="120" height="60" as="geometry"/>
+                <mxCell id="70" value="" style="group" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="40" y="840" width="150" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#60a917;strokeColor=#2D7600;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="1">
-                    <mxGeometry x="360" y="90" width="120" height="60" as="geometry"/>
+                <mxCell id="71" value="" style="group" vertex="1" connectable="0" parent="70">
+                    <mxGeometry width="140" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7" target="2">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="72" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="71">
+                    <mxGeometry x="10" y="10" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" value="EventDispatcher" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="480" y="320" width="120" height="60" as="geometry"/>
+                <mxCell id="73" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#008a00;strokeColor=#005700;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="71">
+                    <mxGeometry x="20" y="20" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="11" target="14">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="74" value="Clients" style="whiteSpace=wrap;html=1;rounded=1;fillColor=#60a917;strokeColor=#2D7600;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="70">
+                    <mxGeometry x="30" y="30" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1" source="11" target="19">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="630" y="600"/>
-                        </Array>
+                <mxCell id="75" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="70">
+                    <mxGeometry x="130" y="40" width="10" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="78" value="wait for exact time to fire event" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="65" target="65">
+                    <mxGeometry x="0.1" y="20" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="11" value="Temporal&lt;br&gt;EventQueue" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="570" y="430" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="14" target="7">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="14" value="EventHandler" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="360" y="430" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1" source="19" target="21">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="540" y="660"/>
-                            <mxPoint x="420" y="660"/>
-                        </Array>
+                <mxCell id="80" value="broadcast &lt;br&gt;on &lt;br&gt;category" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="79" target="74">
+                    <mxGeometry x="-0.0909" y="-20" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="19" value="EventReader" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="480" y="570" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="21" value="EventDatabase" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="360" y="680" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="23" target="28">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="23" value="EventReceiver" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="240" y="320" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="28" target="21">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="28" value="EventWriter" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
-                    <mxGeometry x="240" y="580" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="32" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="1">
-                    <mxGeometry x="460" y="100" width="10" height="20" as="geometry"/>
+                <mxCell id="79" value="MoraDB.Dispatcher" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="300" y="860" width="160" height="80" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
