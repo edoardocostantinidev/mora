@@ -23,10 +23,10 @@ defmodule Moradb.MixProject do
   defp deps do
     [
       {:poison, "~> 3.0"},
-    {:plug, "~> 1.6"},
-    {:plug_cowboy,"~> 2.0"},
-    
-    {:cowboy, "~> 2.4"}
+      {:plug, "~> 1.6"},
+      {:plug_cowboy, "~> 2.0"},
+      {:cowboy, "~> 2.4"},
+      {:priority_queue, "~> 1.0"}
     ]
   end
 end
