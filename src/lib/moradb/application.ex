@@ -4,13 +4,34 @@ defmodule Moradb.Application do
   @moduledoc false
 
   use Application
-
+  require Logger
   @impl true
   def start(_type, _args) do
+    Logger.info("Starting Mora DB 🚀")
+
     children = [
-      {Plug.Cowboy, scheme: :http, plug: Moradb.Api, options: [port: 4000]}
+      {
+        Plug.Cowboy,
+        scheme: :http, plug: Moradb.Api, dispatch: dispatch(), options: [port: 4000]
+      },
+      {Registry, keys: :duplicate, name: Registry.Moradb}
     ]
+
     opts = [strategy: :one_for_one, name: Moradb.Supervisor]
-    Supervisor.start_link(children, opts)
+    return_value = Supervisor.start_link(children, opts)
+    Logger.info("Started Mora DB ✅")
+    return_value
+  end
+
+  defp dispatch() do
+    [
+      {
+        :_,
+        [
+          {"/ws/[...]", Moradb.SocketHandlers.Events, []},
+          {:_, Plug.Cowboy.Handler, {Moradb.Routers.Events, []}}
+        ]
+      }
+    ]
   end
 end
