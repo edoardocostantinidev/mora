@@ -18,8 +18,7 @@ Clients connect to the database via a connection string, subsequently a client c
     "category": "categoryName",
     "data": {
         "field": "value"
-    },
-    "name": "event"
+    }
 };
 ```
 `moradb.schedule(event);`
