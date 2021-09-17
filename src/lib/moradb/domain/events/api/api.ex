@@ -1,7 +1,7 @@
 defmodule Moradb.Api do
   use Plug.Router
   use PlugSocket
-  socket("/ws/events", Moradb.Events.SocketHandler)
+  socket("/ws/events/[...]", Moradb.Events.SocketHandler)
   plug(:match)
   plug(:dispatch)
   forward("/events", to: Moradb.Events.Router)
