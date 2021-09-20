@@ -5,8 +5,11 @@ defmodule Moradb.Events.Router do
   plug(:dispatch)
 
   get "/" do
+    {:ok, events} = Moradb.Events.Database.Local.get_from()
+
     conn
-    |> send_resp(200, "OK")
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> send_resp(200, Poison.encode!(events))
   end
 
   post "/" do
