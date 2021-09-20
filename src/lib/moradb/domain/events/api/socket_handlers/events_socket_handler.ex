@@ -8,32 +8,35 @@ defmodule Moradb.Events.SocketHandler do
       |> String.split(~r/\//)
       |> Enum.take(-1)
 
+    Logger.info("Initializing websocket #{event_category} ⚪")
     state = %{registry_key: event_category, count: 0}
-    IO.inspect(state)
+    Logger.info("Initialized websocket #{event_category} 🟢")
     {:cowboy_websocket, req, state}
   end
 
   def websocket_init(state) do
+    Logger.info("Registering websocket connection #{state.registry_key} ⚪")
+
     Registry.Moradb
     |> Registry.register(state.registry_key, {})
 
+    Logger.info("Registered websocket connection #{state.registry_key} 🟢")
     {:ok, state}
   end
 
   def websocket_handle({:text, json}, state) do
-    Logger.info("Handling websocket event notification")
+    Logger.info("Handling websocket event notification ⚪")
     IO.inspect(json)
     IO.inspect(state)
     event = Poison.decode!(json, as: %Moradb.Event{})
     Moradb.Events.Dispatchers.Websocket.dispatch(event)
     new_state = %{registry_key: state.registry_key, count: state.count + 1}
+    Logger.info("Websocket event notification handled 🟢")
     {:reply, {:text, "#{new_state.count}"}, new_state}
   end
 
   def websocket_info(info, state) do
-    Logger.info("Handling websocket event notification")
-    IO.inspect(info)
-    IO.inspect(state)
+    # not in use probably
     {:reply, {:text, Poison.encode!(info)}, state}
   end
 end

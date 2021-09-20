@@ -27,7 +27,8 @@ defmodule Moradb.MixProject do
       {:plug_cowboy, "~> 2.5.2"},
       {:cowboy, "~> 2.9.0"},
       {:priority_queue, "~> 1.0"},
-      {:plug_socket, "~> 0.1.0"}
+      {:plug_socket, "~> 0.1.0"},
+      {:prioqueue, "~> 0.2.0"}
     ]
   end
 end

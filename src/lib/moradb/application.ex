@@ -16,6 +16,7 @@ defmodule Moradb.Application do
        options: [
          dispatch: PlugSocket.plug_cowboy_dispatch(Moradb.Api)
        ]},
+      Moradb.Events.TemporalQueue.Local,
       {Registry, keys: :duplicate, name: Registry.Moradb}
     ]
 
