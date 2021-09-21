@@ -1,11 +1,14 @@
 defmodule Moradb.Event do
-  defstruct [
-    :id,
-    :createdAt,
-    :fireAt,
-    :category,
-    :data
-  ]
+  use Memento.Table,
+    attributes: [
+      :id,
+      :createdAt,
+      :fireAt,
+      :category,
+      :data
+    ],
+    index: [:fireAt],
+    type: :ordered_set
 
   @type t :: %__MODULE__{
           id: String.t(),

@@ -7,6 +7,10 @@ defmodule Moradb.Events.Router do
   get "/" do
     {:ok, events} = Moradb.Events.Database.Local.get_from()
 
+    events =
+      events
+      |> Enum.map(fn event -> Map.delete(event, :__meta__) end)
+
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
     |> send_resp(200, Poison.encode!(events))

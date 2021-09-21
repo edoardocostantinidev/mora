@@ -7,13 +7,15 @@ defmodule Moradb.Application do
   require Logger
   @impl true
   def start(_type, _args) do
-    Logger.info("Starting Mora DB 🚀")
+    port = Application.fetch_env!(:moradb, :http_port)
+    Logger.info("Starting Mora DB on port #{port}🚀")
 
     children = [
       {Plug.Cowboy,
        scheme: :http,
        plug: Moradb,
        options: [
+         port: port,
          dispatch: PlugSocket.plug_cowboy_dispatch(Moradb.Api)
        ]},
       Moradb.Events.TemporalQueue.Local,

@@ -2,24 +2,25 @@ defmodule Moradb.Events.Database.Local do
   @behaviour Moradb.Events.Database
   use GenServer
   require Logger
-  @db_path ".db"
+
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
 
   def init(_) do
     Logger.debug("Initializing DB ⚪")
 
-    case File.exists?(@db_path) do
-      false -> File.touch(@db_path)
-      _ -> nil
+    if path = Application.get_env(:mnesia, :dir) do
+      :ok = File.mkdir_p!(path)
     end
 
-    file_stream = File.open!(@db_path)
+    nodes = [node()]
+    Memento.stop()
+    Memento.Schema.create(nodes)
+    Memento.start()
+    Memento.Table.create(Moradb.Event, disc_copies: nodes)
     Logger.debug("Initialized DB 🟢")
-
-    {:ok, {file_stream}}
-  end
-
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+    {:ok, {}}
   end
 
   def save(event) do
@@ -44,12 +45,10 @@ defmodule Moradb.Events.Database.Local do
 
   def handle_cast({:save, event}, state) do
     Logger.debug("writing event #{event.id} to disk ⚪")
-    {file_stream} = state
 
-    bytes = :erlang.term_to_binary(event)
-
-    file_stream
-    |> IO.binwrite(bytes)
+    Memento.transaction!(fn ->
+      Memento.Query.write(event)
+    end)
 
     Logger.debug("wrote event #{event.id} to disk 🟢")
     {:noreply, state}
@@ -63,14 +62,24 @@ defmodule Moradb.Events.Database.Local do
     {:noreply, state}
   end
 
-  def handle_call({:get, timestamp, limit}, _from, state) do
-    Logger.debug("received get call with timestamp: #{timestamp} limit: #{limit} ⚪")
-    {file_stream} = state
+  def handle_call({:get}, _from, state) do
+    Logger.debug("received get all call ⚪")
 
     events =
-      file_stream
-      |> IO.binread(:all)
-      |> :erlang.binary_to_term()
+      Memento.transaction!(fn ->
+        Memento.Query.all(Moradb.Event)
+      end)
+
+    {:reply, events, state}
+  end
+
+  def handle_call({:get, timestamp, limit}, _from, state) do
+    Logger.debug("received get call with timestamp: #{timestamp} limit: #{limit} ⚪")
+
+    events =
+      Memento.transaction!(fn ->
+        Memento.Query.all(Moradb.Event)
+      end)
 
     {:reply, events, state}
   end

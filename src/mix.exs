@@ -22,13 +22,15 @@ defmodule Moradb.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:poison, "~> 3.0"},
+      {:cowboy, "~> 2.9.0"},
+      {:memento, "~> 0.3.2"},
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:plug, "~> 1.12.1"},
       {:plug_cowboy, "~> 2.5.2"},
-      {:cowboy, "~> 2.9.0"},
-      {:priority_queue, "~> 1.0"},
       {:plug_socket, "~> 0.1.0"},
-      {:prioqueue, "~> 0.2.0"}
+      {:poison, "~> 3.0"},
+      {:prioqueue, "~> 0.2.0"},
+      {:priority_queue, "~> 1.0"}
     ]
   end
 end
