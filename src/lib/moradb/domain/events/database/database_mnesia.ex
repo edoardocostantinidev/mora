@@ -56,9 +56,9 @@ defmodule Moradb.Events.Database.Mnesia do
     {:ok, data}
   end
 
-  def get_from(opts \\ [limit: 100, timestamp: -1]) do
-    timestamp = opts[:timestamp]
-    limit = opts[:limit]
+  def get_from(opts \\ []) do
+    timestamp = Keyword.get(opts, :timestamp, -1)
+    limit = Keyword.get(opts, :limit, -1)
     Logger.info("getting #{limit} events from #{timestamp} onwards ⚪")
     data = GenServer.call(__MODULE__, {:get, timestamp, limit})
     {:ok, data}

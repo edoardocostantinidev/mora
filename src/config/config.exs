@@ -1,7 +1,7 @@
 import Config
 
 config :moradb, :http_port, 4000
-config :logger, level: :info
+config :logger, level: :debug
 
 config :mnesia,
   dir: '.mnesia/#{Mix.env()}/#{node()}'
