@@ -25,9 +25,8 @@ defmodule Moradb.Events.SocketHandler do
   end
 
   def websocket_handle({:text, json}, state) do
-    Logger.info("Handling websocket event notification ⚪")
-    IO.inspect(json)
-    IO.inspect(state)
+    Logger.debug("Handling websocket event notification ⚪")
+
     event = Poison.decode!(json, as: %Moradb.Event{})
     Moradb.Events.Dispatchers.Websocket.dispatch(event)
     new_state = %{registry_key: state.registry_key, count: state.count + 1}

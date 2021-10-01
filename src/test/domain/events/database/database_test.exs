@@ -1,7 +1,7 @@
 defmodule Moradb.Test.Events.Database do
   use ExUnit.Case
   doctest Moradb
-  alias Moradb.Events.Database.Local
+  alias Moradb.Events.Database.Mnesia
   alias Moradb.Events.Generator
 
   setup _ do
@@ -10,8 +10,8 @@ defmodule Moradb.Test.Events.Database do
 
   test "save function should save an event to database" do
     event = Generator.get_random_event()
-    Local.save(event)
-    {:ok, events} = Local.get_all()
+    Mnesia.save(event)
+    {:ok, events} = Mnesia.get_all()
 
     count =
       events
@@ -20,15 +20,36 @@ defmodule Moradb.Test.Events.Database do
     assert count == 1
   end
 
-  test "get from function should correctly return filtered events" do
+  test "get all function should return all events" do
     0..9
-    |> Enum.each(fn index ->
-      Local.save(Generator.get_random_event())
+    |> Enum.each(fn _ ->
+      Mnesia.save(Generator.get_random_event())
     end)
 
-    {:ok, events} = Local.get_all()
-    IO.inspect(events)
+    {:ok, events} = Mnesia.get_all()
+
     count = events |> Enum.count()
     assert count == 10
+  end
+
+  test "get from function with timestamp should return filtered events" do
+    event1 = Generator.get_random_event(1_000, 1_100)
+    event2 = Generator.get_random_event(1_000_000, 1_100_000)
+    Mnesia.save(event1)
+    Mnesia.save(event2)
+
+    {:ok, events} = Mnesia.get_from(timestamp: 1_101)
+    count = events |> Enum.count()
+    assert count == 1
+  end
+
+  test "get from function with limit should return at most {limit} events" do
+    event1 = Generator.get_random_event(1_000, 1_100)
+    event2 = Generator.get_random_event(1_000_000, 1_100_000)
+    Mnesia.save(event1)
+    Mnesia.save(event2)
+    {:ok, events} = Mnesia.get_from(limit: 1)
+    count = events |> Enum.count()
+    assert count == 1
   end
 end

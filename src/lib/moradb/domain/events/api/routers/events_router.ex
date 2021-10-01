@@ -5,7 +5,7 @@ defmodule Moradb.Events.Router do
   plug(:dispatch)
 
   get "/" do
-    {:ok, events} = Moradb.Events.Database.Local.get_from()
+    {:ok, events} = Moradb.Events.Database.Mnesia.get_from()
 
     events =
       events
@@ -34,8 +34,8 @@ defmodule Moradb.Events.Router do
       Map.put(event, :id, "#{event.createdAt}-#{event.fireAt}-#{event_hash}")
     end)
     |> Enum.each(fn event ->
-      Moradb.Events.Database.Local.save(event)
-      GenServer.cast(Moradb.Events.TemporalQueue.Local, {:notify, event})
+      Moradb.Events.Database.Mnesia.save(event)
+      GenServer.cast(Moradb.Events.TemporalQueue.Priority, {:notify, event})
     end)
   end
 end

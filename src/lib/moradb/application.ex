@@ -11,15 +11,17 @@ defmodule Moradb.Application do
     Logger.info("Starting Mora DB on port #{port}🚀")
 
     children = [
-      {Plug.Cowboy,
-       scheme: :http,
-       plug: Moradb,
-       options: [
-         port: port,
-         dispatch: PlugSocket.plug_cowboy_dispatch(Moradb.Api)
-       ]},
-      Moradb.Events.TemporalQueue.Local,
-      Moradb.Events.Database.Local,
+      {
+        Plug.Cowboy,
+        scheme: :http,
+        plug: Moradb,
+        options: [
+          port: port,
+          dispatch: PlugSocket.plug_cowboy_dispatch(Moradb.Api)
+        ]
+      },
+      Moradb.Events.TemporalQueue.Priority,
+      Moradb.Events.Database.Mnesia,
       {Registry, keys: :duplicate, name: Registry.Moradb}
     ]
 

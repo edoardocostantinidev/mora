@@ -1,4 +1,4 @@
-defmodule Moradb.Events.Database.Local do
+defmodule Moradb.Events.Database.Mnesia do
   @behaviour Moradb.Events.Database
   use GenServer
   require Logger
@@ -31,18 +31,6 @@ defmodule Moradb.Events.Database.Local do
     {:ok}
   end
 
-  def get_all() do
-    Logger.info("getting all events ⚪")
-    data = GenServer.call(__MODULE__, {:get})
-    {:ok, data}
-  end
-
-  def get_from(timestamp \\ -1, limit \\ 100) do
-    Logger.info("getting #{limit} events from #{timestamp} onwards ⚪")
-    data = GenServer.call(__MODULE__, {:get, timestamp, limit})
-    {:ok, data}
-  end
-
   def handle_cast({:save, event}, state) do
     Logger.debug("writing event #{event.id} to disk ⚪")
 
@@ -60,6 +48,20 @@ defmodule Moradb.Events.Database.Local do
     )
 
     {:noreply, state}
+  end
+
+  def get_all() do
+    Logger.info("getting all events ⚪")
+    data = GenServer.call(__MODULE__, {:get})
+    {:ok, data}
+  end
+
+  def get_from(opts \\ [limit: 100, timestamp: -1]) do
+    timestamp = opts[:timestamp]
+    limit = opts[:limit]
+    Logger.info("getting #{limit} events from #{timestamp} onwards ⚪")
+    data = GenServer.call(__MODULE__, {:get, timestamp, limit})
+    {:ok, data}
   end
 
   def handle_call({:get}, _from, state) do
@@ -80,6 +82,8 @@ defmodule Moradb.Events.Database.Local do
       Memento.transaction!(fn ->
         Memento.Query.all(Moradb.Event)
       end)
+      |> Enum.filter(fn event -> event.fireAt >= timestamp end)
+      |> Enum.take(limit)
 
     {:reply, events, state}
   end

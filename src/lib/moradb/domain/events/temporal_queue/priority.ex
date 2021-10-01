@@ -1,4 +1,7 @@
-defmodule Moradb.Events.TemporalQueue.Local do
+defmodule Moradb.Events.TemporalQueue.Priority do
+  @doc """
+  Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
+  """
   @behaviour Moradb.Events.TemporalQueue
   require Logger
   use GenServer
@@ -10,7 +13,7 @@ defmodule Moradb.Events.TemporalQueue.Local do
   end
 
   def init(_) do
-    Logger.debug("Initializing TemporalQueue ⚪")
+    Logger.info("Initializing TemporalQueue ⚪")
     schedule_tick()
     pqueue = []
     current_min = 0
@@ -27,7 +30,7 @@ defmodule Moradb.Events.TemporalQueue.Local do
   def handle_cast(:tick, state) do
     {min, max, size, pq} = state
     time = :os.system_time(:millisecond)
-    Logger.info("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size} ⚪")
+    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size} ⚪")
 
     consumed_pq =
       pq
@@ -39,8 +42,6 @@ defmodule Moradb.Events.TemporalQueue.Local do
     end)
 
     new_pq = pq -- consumed_pq
-
-    IO.inspect(new_pq)
     schedule_tick()
     {:noreply, {min, max, Enum.count(new_pq), new_pq}}
   end
@@ -57,8 +58,6 @@ defmodule Moradb.Events.TemporalQueue.Local do
 
     new_pq = [event | pq]
 
-    IO.inspect(new_pq)
-
     new_pq =
       case {is_space_available, is_event_in_range} do
         {false, true} ->
@@ -68,8 +67,6 @@ defmodule Moradb.Events.TemporalQueue.Local do
         _ ->
           new_pq
       end
-
-    IO.inspect(new_pq)
 
     current_min =
       new_pq
@@ -85,17 +82,14 @@ defmodule Moradb.Events.TemporalQueue.Local do
   end
 
   def handle_cast(msg, state) do
-    Logger.warn("Received a weird message on temporal queue 🟡")
-    IO.inspect(msg)
-    IO.inspect(state)
+    Logger.warn("Received a weird message on temporal queue:\n#{msg} 🟡")
+
     Logger.warn("Ignoring 🟡")
     {:noreply, state}
   end
 
   def notify(event) do
     Logger.debug("Notifying queues about #{event.id} ⚪")
-    IO.inspect(self())
-
     GenServer.cast(__MODULE__, {:notify, event})
   end
 
