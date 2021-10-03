@@ -28,3 +28,9 @@ mora then proceeds to do the following:
 1) Store the event inside a persistent database
 2) Notify any temporal queue of the event, if the temporal queue has space it will queue it up. If the temporal queue is full it will pick it up via query to the database later on, unless the `fireAt` field is inside the current temporal range of the queue. In that case the temporal queue will make room for it by re-processing the last event in the queue at a later (compatible) time. This process will insure that each event is fired correctly and temporal queues are never overqueued.
 3) When the `fireAt` time is `<=` current time, the event gets processed and all connected client will be notified of the event (if they are subscribed to the relevant category) by a dispatcher.
+
+## How to contribute
+
+### Test
+
+run `elixirc .\test\domain\events\model\event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it). 
