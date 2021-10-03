@@ -13,7 +13,7 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   end
 
   def init(_) do
-    Logger.info("Initializing TemporalQueue ⚪")
+    Logger.info("Initializing TemporalQueue")
     schedule_tick()
     pqueue = []
     current_min = 0
@@ -30,7 +30,7 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   def handle_cast(:tick, state) do
     {min, max, size, pq} = state
     time = :os.system_time(:millisecond)
-    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size} ⚪")
+    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size}")
 
     consumed_pq =
       pq
@@ -53,7 +53,7 @@ defmodule Moradb.Events.TemporalQueue.Priority do
     is_event_in_range = event.fireAt <= max && event.fireAt >= min
 
     Logger.debug(
-      "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range} ⚪"
+      "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range}"
     )
 
     new_pq = [event | pq]
@@ -82,20 +82,31 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   end
 
   def handle_cast(msg, state) do
-    Logger.warn("Received a weird message on temporal queue:\n#{msg} 🟡")
+    Logger.warn("Received a weird message on temporal queue:\n#{msg} ")
 
-    Logger.warn("Ignoring 🟡")
+    Logger.warn("Ignoring ")
     {:noreply, state}
   end
 
+  def handle_call({:info}, _from, state) do
+    {min, max, size, _pq} = state
+
+    {:reply,
+     %{
+       queue_size: size,
+       queue_min: min,
+       queue_max: max
+     }, state}
+  end
+
   def notify(event) do
-    Logger.debug("Notifying queues about #{event.id} ⚪")
+    Logger.debug("Notifying queues about #{event.id}")
     GenServer.cast(__MODULE__, {:notify, event})
   end
 
   defp schedule_tick() do
-    Logger.debug("Scheduling Tick ⚪")
+    Logger.debug("Scheduling Tick")
     Process.send_after(self(), :tick, @tick)
-    Logger.debug("Done 🟢")
+    Logger.debug("Done")
   end
 end

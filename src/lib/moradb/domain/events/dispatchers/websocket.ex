@@ -5,7 +5,7 @@ defmodule Moradb.Events.Dispatchers.Websocket do
 
   @spec dispatch(Event.t()) :: {:ok}
   def dispatch(event) do
-    Logger.info("dispatching event #{event.id} ⚪")
+    Logger.info("dispatching event #{event.id}")
 
     Registry.Moradb
     |> Registry.dispatch(event.category, fn entries ->
@@ -16,7 +16,7 @@ defmodule Moradb.Events.Dispatchers.Websocket do
       end
     end)
 
-    Logger.info("dispatched event #{event.id} 🟢")
+    Logger.info("dispatched event #{event.id}")
     {:ok}
   end
 end

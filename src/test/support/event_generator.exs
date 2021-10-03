@@ -1,6 +1,6 @@
 defmodule Moradb.Events.Generator do
   def get_random_event do
-    get_random_event(1_632_235_256_700, 1_632_255_256_733)
+    get_random_event(1_682_235_256_700, 1_692_255_256_733)
   end
 
   def get_random_event(fire_at_min, fire_at_max) do

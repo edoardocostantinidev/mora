@@ -8,7 +8,7 @@ defmodule Moradb.Application do
   @impl true
   def start(_type, _args) do
     port = Application.fetch_env!(:moradb, :http_port)
-    Logger.info("Starting Mora DB on port #{port}🚀")
+    Logger.info("Starting Mora DB on port #{port}")
 
     children = [
       {
@@ -27,7 +27,7 @@ defmodule Moradb.Application do
 
     opts = [strategy: :one_for_one, name: Moradb.Supervisor]
     return_value = Supervisor.start_link(children, opts)
-    Logger.info("Started Mora DB ✅")
+    Logger.info("Started Mora DB")
     return_value
   end
 end

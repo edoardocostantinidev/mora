@@ -8,7 +8,7 @@ defmodule Moradb.Events.Database.Mnesia do
   end
 
   def init(_) do
-    Logger.debug("Initializing DB ⚪")
+    Logger.debug("Initializing DB")
 
     if path = Application.get_env(:mnesia, :dir) do
       :ok = File.mkdir_p!(path)
@@ -19,39 +19,39 @@ defmodule Moradb.Events.Database.Mnesia do
     Memento.Schema.create(nodes)
     Memento.start()
     Memento.Table.create(Moradb.Event, disc_copies: nodes)
-    Logger.debug("Initialized DB 🟢")
+    Logger.debug("Initialized DB")
     {:ok, {}}
   end
 
   def save(event) do
-    Logger.debug("saving #{event.id} locally ⚪")
+    Logger.debug("saving #{event.id} locally")
     GenServer.cast(__MODULE__, {:save, event})
-    Logger.debug("saved #{event.id} locally 🟢")
+    Logger.debug("saved #{event.id} locally")
 
     {:ok}
   end
 
   def handle_cast({:save, event}, state) do
-    Logger.debug("writing event #{event.id} to disk ⚪")
+    Logger.debug("writing event #{event.id} to disk")
 
     Memento.transaction!(fn ->
       Memento.Query.write(event)
     end)
 
-    Logger.debug("wrote event #{event.id} to disk 🟢")
+    Logger.debug("wrote event #{event.id} to disk")
     {:noreply, state}
   end
 
   def handle_cast(cast, state) do
     Logger.warn(
-      "Received a weird cast on #{__MODULE__}: #{IO.inspect(cast)} #{IO.inspect(state)}🟡"
+      "Received a weird cast on #{__MODULE__}: #{IO.inspect(cast)} #{IO.inspect(state)}"
     )
 
     {:noreply, state}
   end
 
   def get_all() do
-    Logger.info("getting all events ⚪")
+    Logger.info("getting all events")
     data = GenServer.call(__MODULE__, {:get})
     {:ok, data}
   end
@@ -59,13 +59,13 @@ defmodule Moradb.Events.Database.Mnesia do
   def get_from(opts \\ []) do
     timestamp = Keyword.get(opts, :timestamp, -1)
     limit = Keyword.get(opts, :limit, -1)
-    Logger.info("getting #{limit} events from #{timestamp} onwards ⚪")
+    Logger.info("getting #{limit} events from #{timestamp} onwards")
     data = GenServer.call(__MODULE__, {:get, timestamp, limit})
     {:ok, data}
   end
 
   def handle_call({:get}, _from, state) do
-    Logger.debug("received get all call ⚪")
+    Logger.debug("received get all call")
 
     events =
       Memento.transaction!(fn ->
@@ -76,7 +76,7 @@ defmodule Moradb.Events.Database.Mnesia do
   end
 
   def handle_call({:get, timestamp, limit}, _from, state) do
-    Logger.debug("received get call with timestamp: #{timestamp} limit: #{limit} ⚪")
+    Logger.debug("received get call with timestamp: #{timestamp} limit: #{limit}")
 
     events =
       Memento.transaction!(fn ->
@@ -90,7 +90,7 @@ defmodule Moradb.Events.Database.Mnesia do
 
   def handle_call(call, state) do
     Logger.warn(
-      "Received a weird call on #{__MODULE__}: #{IO.inspect(call)} #{IO.inspect(state)}🟡"
+      "Received a weird call on #{__MODULE__}: #{IO.inspect(call)} #{IO.inspect(state)}"
     )
 
     {:noreply, state}
