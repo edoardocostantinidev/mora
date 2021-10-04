@@ -47,36 +47,15 @@ defmodule Mora.Events.TemporalQueue.Priority do
 
   """
   def handle_cast(:tick, state) do
-    {min, max, size, pq} = state
-    time = :os.system_time(:millisecond)
-    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size}")
-
-    consumed_pq =
-      pq
-      |> Enum.filter(fn event -> event.fireAt <= time end)
-
-    consumed_pq
-    |> Enum.each(fn event ->
-      Mora.Events.Dispatchers.Websocket.dispatch(event)
-    end)
-
-    new_pq = pq -- consumed_pq
-    schedule_tick()
-
-    max_events_to_retrieve = Enum.count(consumed_pq)
-    current_max = get_current_max(consumed_pq, max)
-
-    {:ok, events} =
-      GenServer.call(Mora.Events.Database.Mnesia, {:get, current_max, max_events_to_retrieve})
-
-    events
-    |> Enum.each(fn event -> GenServer.cast(self(), {:notify, event}) end)
-
-    {:noreply, {min, max, Enum.count(new_pq), new_pq}}
+    t1 = :erlang.system_time(:microsecond)
+    new_state = do_tick(state)
+    t2 = :erlang.system_time(:microsecond)
+    Logger.info("Tick performed in #{t2 - t1}µs")
+    {:noreply, new_state}
   end
 
   def handle_cast({:notify, event}, state) do
-    new_state = notify(event, state)
+    {:ok, new_state} = notify(event, state)
     {:noreply, new_state}
   end
 
@@ -155,18 +134,59 @@ defmodule Mora.Events.TemporalQueue.Priority do
     state
   end
 
-  defp get_current_min(pq, max) do
-    pq
-    |> Enum.take(1)
-    |> Enum.at(0)
-    |> Map.get(:fireAt, max)
+  defp get_current_min(pq, min) do
+    case(pq) do
+      [] ->
+        0
+
+      _ ->
+        pq
+        |> Enum.take(1)
+        |> Enum.at(0)
+        |> Map.get(:fireAt, min)
+    end
   end
 
   defp get_current_max(pq, max) do
-    pq
-    |> Enum.take(-1)
-    |> Enum.at(0)
-    |> Map.get(:fireAt, max)
+    case(pq) do
+      [] ->
+        0
+
+      _ ->
+        pq
+        |> Enum.take(-1)
+        |> Enum.at(0)
+        |> Map.get(:fireAt, max)
+    end
+  end
+
+  defp do_tick(state) do
+    {min, max, size, pq} = state
+    time = :os.system_time(:millisecond)
+    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size}")
+
+    consumed_pq =
+      pq
+      |> Enum.filter(fn event -> event.fireAt <= time end)
+
+    consumed_pq
+    |> Enum.each(fn event ->
+      Mora.Events.Dispatchers.Websocket.dispatch(event)
+    end)
+
+    new_pq = pq -- consumed_pq
+    schedule_tick()
+
+    max_events_to_retrieve = Enum.count(consumed_pq)
+    current_max = get_current_max(consumed_pq, max)
+    new_size = Enum.count(new_pq)
+
+    if Enum.count(consumed_pq) > 0 && size == @max_size do
+      GenServer.call(Mora.Events.Database.Mnesia, {:get, current_max + 1, max_events_to_retrieve})
+      |> Enum.each(fn event -> GenServer.cast(self(), {:notify, event}) end)
+    end
+
+    {min, max, new_size, new_pq}
   end
 
   defp schedule_tick() do

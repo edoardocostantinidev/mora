@@ -33,7 +33,8 @@ defmodule Mora.MixProject do
       {:plug_socket, "~> 0.1.0"},
       {:poison, "~> 3.0"},
       {:prioqueue, "~> 0.2.0"},
-      {:priority_queue, "~> 1.0"}
+      {:priority_queue, "~> 1.0"},
+      {:stopwatch, "~> 0.0.7"}
     ]
   end
 
