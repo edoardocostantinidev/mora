@@ -1,10 +1,10 @@
-defmodule Moradb.MixProject do
+defmodule Mora.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :moradb,
-      version: "0.1.0",
+      app: :mora,
+      version: "0.1.1",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -16,7 +16,7 @@ defmodule Moradb.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Moradb.Application, []}
+      mod: {Mora.Application, []}
     ]
   end
 

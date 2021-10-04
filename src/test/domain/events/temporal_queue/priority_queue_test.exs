@@ -1,11 +1,11 @@
-defmodule Moradb.Test.Events.TemporalQueue.Priority do
+defmodule Mora.Test.Events.TemporalQueue.Priority do
   use ExUnit.Case
-  doctest Moradb
-  alias Moradb.Events.TemporalQueue.Priority
-  alias Moradb.Events.Generator
+  doctest Mora
+  alias Mora.Events.TemporalQueue.Priority
+  alias Mora.Events.Generator
 
   setup _ do
-    Memento.Table.clear(Moradb.Event)
+    Memento.Table.clear(Mora.Event)
     start_supervised(Priority)
     on_exit(fn -> GenServer.cast(Priority, :clear) end)
     :ok

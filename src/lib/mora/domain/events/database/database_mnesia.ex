@@ -1,5 +1,5 @@
-defmodule Moradb.Events.Database.Mnesia do
-  @behaviour Moradb.Events.Database
+defmodule Mora.Events.Database.Mnesia do
+  @behaviour Mora.Events.Database
   use GenServer
   require Logger
 
@@ -8,7 +8,7 @@ defmodule Moradb.Events.Database.Mnesia do
   end
 
   def init(_) do
-    Logger.debug("Initializing DB")
+    Logger.debug("Initializing Mora 🫐")
 
     if path = Application.get_env(:mnesia, :dir) do
       :ok = File.mkdir_p!(path)
@@ -18,8 +18,8 @@ defmodule Moradb.Events.Database.Mnesia do
     Memento.stop()
     Memento.Schema.create(nodes)
     Memento.start()
-    Memento.Table.create(Moradb.Event, disc_copies: nodes)
-    Logger.debug("Initialized DB")
+    Memento.Table.create(Mora.Event, disc_copies: nodes)
+    Logger.debug("Initialized Mora 🫐")
     {:ok, {}}
   end
 
@@ -67,7 +67,7 @@ defmodule Moradb.Events.Database.Mnesia do
 
     events =
       Memento.transaction!(fn ->
-        Memento.Query.all(Moradb.Event)
+        Memento.Query.all(Mora.Event)
       end)
 
     {:reply, events, state}
@@ -78,7 +78,7 @@ defmodule Moradb.Events.Database.Mnesia do
 
     events =
       Memento.transaction!(fn ->
-        Memento.Query.all(Moradb.Event)
+        Memento.Query.all(Mora.Event)
       end)
       |> Enum.filter(fn event -> event.fireAt >= timestamp end)
       |> Enum.take(limit)

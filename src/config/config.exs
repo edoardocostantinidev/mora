@@ -1,6 +1,6 @@
 import Config
 
-config :moradb, :http_port, 4000
+config :mora, :http_port, 4000
 config :logger, level: :debug
 
 config :mnesia,

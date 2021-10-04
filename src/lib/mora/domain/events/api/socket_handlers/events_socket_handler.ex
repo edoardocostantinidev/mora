@@ -1,4 +1,4 @@
-defmodule Moradb.Events.SocketHandler do
+defmodule Mora.Events.SocketHandler do
   @behaviour :cowboy_websocket
   require Logger
 
@@ -17,7 +17,7 @@ defmodule Moradb.Events.SocketHandler do
   def websocket_init(state) do
     Logger.info("Registering websocket connection #{state.registry_key}")
 
-    Registry.Moradb
+    Registry.Mora
     |> Registry.register(state.registry_key, {})
 
     Logger.info("Registered websocket connection #{state.registry_key}")
@@ -27,8 +27,8 @@ defmodule Moradb.Events.SocketHandler do
   def websocket_handle({:text, json}, state) do
     Logger.debug("Handling websocket event notification")
 
-    event = Poison.decode!(json, as: %Moradb.Event{})
-    Moradb.Events.Dispatchers.Websocket.dispatch(event)
+    event = Poison.decode!(json, as: %Mora.Event{})
+    Mora.Events.Dispatchers.Websocket.dispatch(event)
     new_state = %{registry_key: state.registry_key, count: state.count + 1}
     Logger.info("Websocket event notification handled")
     {:reply, {:text, "#{new_state.count}"}, new_state}

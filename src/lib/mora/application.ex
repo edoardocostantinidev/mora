@@ -1,4 +1,4 @@
-defmodule Moradb.Application do
+defmodule Mora.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -7,27 +7,27 @@ defmodule Moradb.Application do
   require Logger
   @impl true
   def start(_type, _args) do
-    port = Application.fetch_env!(:moradb, :http_port)
+    port = Application.fetch_env!(:mora, :http_port)
     Logger.info("Starting Mora DB on port #{port}")
 
     children = [
       {
         Plug.Cowboy,
         scheme: :http,
-        plug: Moradb,
+        plug: Mora,
         options: [
           port: port,
-          dispatch: PlugSocket.plug_cowboy_dispatch(Moradb.Api)
+          dispatch: PlugSocket.plug_cowboy_dispatch(Mora.Api)
         ]
       },
-      Moradb.Events.TemporalQueue.Priority,
-      Moradb.Events.Database.Mnesia,
-      {Registry, keys: :duplicate, name: Registry.Moradb}
+      Mora.Events.TemporalQueue.Priority,
+      Mora.Events.Database.Mnesia,
+      {Registry, keys: :duplicate, name: Registry.Mora}
     ]
 
-    opts = [strategy: :one_for_one, name: Moradb.Supervisor]
+    opts = [strategy: :one_for_one, name: Mora.Supervisor]
     return_value = Supervisor.start_link(children, opts)
-    Logger.info("Started Mora DB")
+    Logger.info("Started Mora")
     return_value
   end
 end

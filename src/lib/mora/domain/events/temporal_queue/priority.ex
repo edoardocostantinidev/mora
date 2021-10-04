@@ -1,21 +1,25 @@
-defmodule Moradb.Events.TemporalQueue.Priority do
-  @doc """
-  Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
-  """
-
+defmodule Mora.Events.TemporalQueue.Priority do
   @moduledoc """
-
+  Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
+  Module's state is a tuple containing `{current_min, current_max, current_size, pqueue}`. Respectively the current minimum fireAt timestamp, the current maximum fireAt timestamp, the current size and the queue itself.
+  @moduledoc since: "0.1.0"
   """
-  @behaviour Moradb.Events.TemporalQueue
+
+  @behaviour Mora.Events.TemporalQueue
   require Logger
   use GenServer
   @max_size 1000
   @tick 999
 
+  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  @doc """
+  starts up a temporal queue with priority implementation.
+  """
+  @spec init(any) :: {:ok, {0, 0, 0, []}}
   def init(_) do
     Logger.info("Initializing TemporalQueue")
     schedule_tick()
@@ -24,11 +28,6 @@ defmodule Moradb.Events.TemporalQueue.Priority do
     current_max = 0
     current_size = 0
     {:ok, {current_min, current_max, current_size, pqueue}}
-  end
-
-  def handle_info(msg, state) do
-    GenServer.cast(__MODULE__, msg)
-    {:noreply, state}
   end
 
   def handle_cast(:tick, state) do
@@ -42,7 +41,7 @@ defmodule Moradb.Events.TemporalQueue.Priority do
 
     consumed_pq
     |> Enum.each(fn event ->
-      Moradb.Events.Dispatchers.Websocket.dispatch(event)
+      Mora.Events.Dispatchers.Websocket.dispatch(event)
     end)
 
     new_pq = pq -- consumed_pq

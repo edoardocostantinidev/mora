@@ -1,13 +1,13 @@
-defmodule Moradb.Events.Dispatchers.Websocket do
-  @behaviour Moradb.Events.Dispatcher
+defmodule Mora.Events.Dispatchers.Websocket do
+  @behaviour Mora.Events.Dispatcher
   require Logger
-  alias Moradb.Event
+  alias Mora.Event
 
   @spec dispatch(Event.t()) :: {:ok}
   def dispatch(event) do
     Logger.info("dispatching event #{event.id}")
 
-    Registry.Moradb
+    Registry.Mora
     |> Registry.dispatch(event.category, fn entries ->
       for {pid, _} <- entries do
         if pid != self() do

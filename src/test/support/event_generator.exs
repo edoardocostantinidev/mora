@@ -1,11 +1,11 @@
-defmodule Moradb.Events.Generator do
+defmodule Mora.Events.Generator do
   def get_random_event do
     get_random_event(1_682_235_256_700, 1_692_255_256_733)
   end
 
   def get_random_event(fire_at_min, fire_at_max) do
     event =
-      struct(Moradb.Event,
+      struct(Mora.Event,
         fireAt: :rand.uniform(fire_at_max - fire_at_min) + fire_at_min,
         createdAt: :rand.uniform(fire_at_max - fire_at_min) + fire_at_min,
         category: :crypto.strong_rand_bytes(10)

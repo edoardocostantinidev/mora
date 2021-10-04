@@ -1,4 +1,4 @@
-defmodule Moradb.Event do
+defmodule Mora.Event do
   use Memento.Table,
     attributes: [
       :id,
