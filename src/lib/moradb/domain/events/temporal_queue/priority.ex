@@ -50,35 +50,61 @@ defmodule Moradb.Events.TemporalQueue.Priority do
     {min, max, size, pq} = state
 
     is_space_available = size < @max_size
-    is_event_in_range = event.fireAt <= max && event.fireAt >= min
+    is_event_in_range = event.fireAt < max && event.fireAt > min
 
     Logger.debug(
       "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range}"
     )
 
-    new_pq = [event | pq]
+    # IO.inspect({is_space_available, is_event_in_range})
 
-    new_pq =
-      case {is_space_available, is_event_in_range} do
-        {false, true} ->
-          new_pq
+    case {is_space_available, is_event_in_range} do
+      {false, true} ->
+        new_pq =
+          [event | pq]
+          |> Enum.sort_by(fn e -> e.fireAt end)
           |> Enum.take(@max_size)
 
-        _ ->
+        current_min =
           new_pq
-      end
+          |> Enum.at(0)
+          |> Map.get(:fireAt, min)
 
-    current_min =
-      new_pq
-      |> Enum.at(0)
-      |> Map.get(:fireAt, min)
+        current_max =
+          new_pq
+          |> Enum.at(Enum.count(new_pq) - 1)
+          |> Map.get(:fireAt, max)
 
-    current_max =
-      new_pq
-      |> Enum.at(size)
-      |> Map.get(:fireAt, max)
+        {:noreply, {current_min, current_max, size + 1, new_pq}}
 
-    {:noreply, {current_min, current_max, size + 1, new_pq}}
+      {true, _} ->
+        new_pq =
+          [event | pq]
+          |> Enum.sort_by(fn e -> e.fireAt end)
+
+        current_min =
+          new_pq
+          |> Enum.at(0)
+          |> Map.get(:fireAt, min)
+
+        current_max =
+          new_pq
+          |> Enum.at(Enum.count(new_pq) - 1)
+          |> Map.get(:fireAt, max)
+
+        {:noreply, {current_min, current_max, size + 1, new_pq}}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_cast(:clear, _state) do
+    pqueue = []
+    current_min = 0
+    current_max = 0
+    current_size = 0
+    {:noreply, {current_min, current_max, current_size, pqueue}}
   end
 
   def handle_cast(msg, state) do
@@ -88,14 +114,14 @@ defmodule Moradb.Events.TemporalQueue.Priority do
     {:noreply, state}
   end
 
-  def handle_call({:info}, _from, state) do
+  def handle_call(:info, _from, state) do
     {min, max, size, _pq} = state
 
     {:reply,
      %{
        queue_size: size,
-       queue_min: min,
-       queue_max: max
+       queue_temporal_min: min,
+       queue_temporal_max: max
      }, state}
   end
 
@@ -103,6 +129,8 @@ defmodule Moradb.Events.TemporalQueue.Priority do
     Logger.debug("Notifying queues about #{event.id}")
     GenServer.cast(__MODULE__, {:notify, event})
   end
+
+  def max_size, do: @max_size
 
   defp schedule_tick() do
     Logger.debug("Scheduling Tick")
