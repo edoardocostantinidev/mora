@@ -8,7 +8,7 @@ defmodule Mora.Events.Database.Mnesia do
   end
 
   def init(_) do
-    Logger.debug("Initializing Mora 🫐")
+    Logger.debug("Initializing Mnesia")
 
     if path = Application.get_env(:mnesia, :dir) do
       :ok = File.mkdir_p!(path)
@@ -19,7 +19,7 @@ defmodule Mora.Events.Database.Mnesia do
     Memento.Schema.create(nodes)
     Memento.start()
     Memento.Table.create(Mora.Event, disc_copies: nodes)
-    Logger.debug("Initialized Mora 🫐")
+    Logger.debug("Initialized Mnesia")
     {:ok, {}}
   end
 
