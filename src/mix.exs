@@ -23,6 +23,8 @@ defmodule Mora.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:benchee, "~> 1.0", only: :bench},
+      {:benchee_html, "~> 1.0", only: :bench},
       {:cowboy, "~> 2.9.0"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
@@ -33,8 +35,7 @@ defmodule Mora.MixProject do
       {:plug_socket, "~> 0.1.0"},
       {:poison, "~> 3.0"},
       {:prioqueue, "~> 0.2.0"},
-      {:priority_queue, "~> 1.0"},
-      {:stopwatch, "~> 0.0.7"}
+      {:priority_queue, "~> 1.0"}
     ]
   end
 
