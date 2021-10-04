@@ -2,6 +2,10 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   @doc """
   Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
   """
+
+  @moduledoc """
+
+  """
   @behaviour Moradb.Events.TemporalQueue
   require Logger
   use GenServer
@@ -47,56 +51,17 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   end
 
   def handle_cast({:notify, event}, state) do
-    {min, max, size, pq} = state
+    {_min, max, size, _pq} = state
 
     is_space_available = size < @max_size
-    is_event_in_range = event.fireAt < max && event.fireAt > min
+    is_event_in_range = event.fireAt < max
 
     Logger.debug(
       "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range}"
     )
 
-    # IO.inspect({is_space_available, is_event_in_range})
-
-    case {is_space_available, is_event_in_range} do
-      {false, true} ->
-        new_pq =
-          [event | pq]
-          |> Enum.sort_by(fn e -> e.fireAt end)
-          |> Enum.take(@max_size)
-
-        current_min =
-          new_pq
-          |> Enum.at(0)
-          |> Map.get(:fireAt, min)
-
-        current_max =
-          new_pq
-          |> Enum.at(Enum.count(new_pq) - 1)
-          |> Map.get(:fireAt, max)
-
-        {:noreply, {current_min, current_max, size + 1, new_pq}}
-
-      {true, _} ->
-        new_pq =
-          [event | pq]
-          |> Enum.sort_by(fn e -> e.fireAt end)
-
-        current_min =
-          new_pq
-          |> Enum.at(0)
-          |> Map.get(:fireAt, min)
-
-        current_max =
-          new_pq
-          |> Enum.at(Enum.count(new_pq) - 1)
-          |> Map.get(:fireAt, max)
-
-        {:noreply, {current_min, current_max, size + 1, new_pq}}
-
-      _ ->
-        {:noreply, state}
-    end
+    new_state = enqueue(event, state, is_space_available, is_event_in_range)
+    {:noreply, new_state}
   end
 
   def handle_cast(:clear, _state) do
@@ -131,6 +96,51 @@ defmodule Moradb.Events.TemporalQueue.Priority do
   end
 
   def max_size, do: @max_size
+
+  defp enqueue(event, state, false, true) do
+    {min, max, size, pq} = state
+
+    new_pq =
+      [event | pq]
+      |> Enum.sort_by(fn e -> e.fireAt end)
+      |> Enum.take(@max_size)
+
+    current_min =
+      new_pq
+      |> Enum.at(0)
+      |> Map.get(:fireAt, min)
+
+    current_max =
+      new_pq
+      |> Enum.at(Enum.count(new_pq) - 1)
+      |> Map.get(:fireAt, max)
+
+    {current_min, current_max, size, new_pq}
+  end
+
+  defp enqueue(event, state, true, _) do
+    {min, max, size, pq} = state
+
+    new_pq =
+      [event | pq]
+      |> Enum.sort_by(fn e -> e.fireAt end)
+
+    current_min =
+      new_pq
+      |> Enum.at(0)
+      |> Map.get(:fireAt, min)
+
+    current_max =
+      new_pq
+      |> Enum.at(Enum.count(new_pq) - 1)
+      |> Map.get(:fireAt, max)
+
+    {current_min, current_max, size + 1, new_pq}
+  end
+
+  defp enqueue(_event, state, _, _) do
+    state
+  end
 
   defp schedule_tick() do
     Logger.debug("Scheduling Tick")

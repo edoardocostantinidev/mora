@@ -40,17 +40,20 @@ defmodule Moradb.Test.Events.TemporalQueue.Priority do
     assert queue_size == max_size
   end
 
-  # test "queues should not contain more than @max_size events" do
-  #   0..2000
-  #   |> Enum.each(fn _ ->
-  #     event = Generator.get_random_event()
-  #     GenServer.cast(Priority, {:notify, event})
-  #   end)
+  test "pqueue should insert new item when notified of an event and the pqueue doesn't have space and the event is in range" do
+    max_size = Priority.max_size()
 
-  #   :timer.sleep(1000)
-  #   info = GenServer.call(Priority, {:info})
-  #   IO.inspect(info)
-  #   %{queue_size: queue_size} = info
-  #   assert queue_size == 1000
-  # end
+    1..max_size
+    |> Enum.each(fn _ ->
+      event = Generator.get_random_event(9_000_000_000, 9_900_000_000)
+      GenServer.cast(Priority, {:notify, event})
+    end)
+
+    event_inside_range = Generator.get_random_event(8_000_000_000, 8_900_000_000)
+    GenServer.cast(Priority, {:notify, event_inside_range})
+
+    %{queue_size: queue_size} = GenServer.call(Priority, :info)
+
+    assert queue_size == max_size
+  end
 end

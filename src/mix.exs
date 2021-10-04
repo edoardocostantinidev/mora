@@ -24,6 +24,7 @@ defmodule Moradb.MixProject do
   defp deps do
     [
       {:cowboy, "~> 2.9.0"},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:memento, "~> 0.3.2"},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},

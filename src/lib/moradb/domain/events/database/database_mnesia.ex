@@ -43,9 +43,7 @@ defmodule Moradb.Events.Database.Mnesia do
   end
 
   def handle_cast(cast, state) do
-    Logger.warn(
-      "Received a weird cast on #{__MODULE__}: #{IO.inspect(cast)} #{IO.inspect(state)}"
-    )
+    Logger.warn("Received a weird cast on #{__MODULE__}: #{cast} #{state}")
 
     {:noreply, state}
   end
@@ -89,9 +87,7 @@ defmodule Moradb.Events.Database.Mnesia do
   end
 
   def handle_call(call, state) do
-    Logger.warn(
-      "Received a weird call on #{__MODULE__}: #{IO.inspect(call)} #{IO.inspect(state)}"
-    )
+    Logger.warn("Received a weird call on #{__MODULE__}: #{call} #{state}")
 
     {:noreply, state}
   end
