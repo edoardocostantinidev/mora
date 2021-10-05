@@ -14,5 +14,5 @@ erl_crash.dump
 .elixir_ls/
 .mnesia
 ### Elixir Patch ###
-
+.env
 # End of https://www.toptal.com/developers/gitignore/api/elixir

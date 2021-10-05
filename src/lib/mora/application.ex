@@ -11,12 +11,13 @@ defmodule Mora.Application do
     Logger.info("Starting Mora DB on port #{port}")
 
     children = [
+      {Cluster.Supervisor, [Application.fetch_env!(:libcluster, :topologies)]},
       {
         Plug.Cowboy,
         scheme: :http,
         plug: Mora,
         options: [
-          port: port,
+          port: String.to_integer(port),
           dispatch: PlugSocket.plug_cowboy_dispatch(Mora.Api)
         ]
       },

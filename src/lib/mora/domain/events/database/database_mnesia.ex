@@ -11,14 +11,20 @@ defmodule Mora.Events.Database.Mnesia do
     Logger.debug("Initializing Mnesia")
 
     if path = Application.get_env(:mnesia, :dir) do
+      Logger.debug("Trying to create dir ${path}")
       :ok = File.mkdir_p!(path)
+      Logger.debug("Dir ${path} created.")
     end
 
-    nodes = [node()]
-    Memento.stop()
+    nodes = [node() | Node.list()]
+    Logger.debug("Retrieved ${nodes}")
+    :rpc.multicall(nodes, Memento, :stop, [])
     Memento.Schema.create(nodes)
-    Memento.start()
+    Logger.debug("Created schema on ${nodes}")
+    :rpc.multicall(nodes, Memento, :start, [])
     Memento.Table.create(Mora.Event, disc_copies: nodes)
+    Logger.debug("Created tables on ${nodes}")
+
     Logger.debug("Initialized Mnesia")
     {:ok, {}}
   end
