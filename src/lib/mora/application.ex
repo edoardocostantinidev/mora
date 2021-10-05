@@ -12,6 +12,10 @@ defmodule Mora.Application do
 
     children = [
       {Cluster.Supervisor, [Application.fetch_env!(:libcluster, :topologies)]},
+      %{
+        id: :pg,
+        start: {:pg, :start_link, []}
+      },
       {
         Plug.Cowboy,
         scheme: :http,
@@ -23,6 +27,7 @@ defmodule Mora.Application do
       },
       Mora.Events.TemporalQueue.Priority,
       Mora.Events.Database.Mnesia,
+      Mora.Events.Dispatchers.Websocket,
       {Registry, keys: :duplicate, name: Registry.Mora}
     ]
 

@@ -24,14 +24,9 @@ defmodule Mora.Events.SocketHandler do
     {:ok, state}
   end
 
-  def websocket_handle({:text, json}, state) do
-    Logger.debug("Handling websocket event notification")
-
-    event = Poison.decode!(json, as: %Mora.Event{})
-    Mora.Events.Dispatchers.Websocket.dispatch(event)
-    new_state = %{registry_key: state.registry_key, count: state.count + 1}
-    Logger.info("Websocket event notification handled")
-    {:reply, {:text, "#{new_state.count}"}, new_state}
+  def websocket_handle({:text, _json}, state) do
+    Logger.error("websocket incoming handle not implemented")
+    {:ok, state}
   end
 
   def websocket_info(info, state) do
