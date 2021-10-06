@@ -6,15 +6,11 @@ config :logger,
 config :libcluster,
   topologies: [
     prod: [
-      strategy: Cluster.Strategy.Kubernetes,
+      strategy: Cluster.Strategy.Kubernetes.DNS,
       config: [
         mode: :dns,
-        service: "mora-nodes",
-        application_name: "mora",
-        kubernetes_node_basename: "mora",
-        kubernetes_selector: "app=mora",
-        kubernetes_namespace: "mora",
-        polling_interval: 10_000
+        service: "mora-svc-headless",
+        application_name: "mora"
       ]
     ]
   ]

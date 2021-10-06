@@ -5,70 +5,89 @@ metadata:
   name: mora
 
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: mora
   namespace: mora
+  labels:
+    app.kubernetes.io/name: mora
+    app.kubernetes.io/instance: mora-cluster
 spec:
-  replicas: 3
+  replicas: 12
   selector:
     matchLabels:
-      app: mora
+      app.kubernetes.io/name: mora
+      app.kubernetes.io/instance: mora-node
   template:
     metadata:
       labels:
-        app: mora
+        app.kubernetes.io/name: mora
+        app.kubernetes.io/instance: mora-node
     spec:
       containers:
-        - name: mora
+        - name: main
           image: edgardking/mora:latest
           imagePullPolicy: Always
-          ports:
-            - containerPort: 4000
           env:
-            - name: MY_POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: RELEASE_NODE
-              value: "mora@$(MY_POD_IP)"
             - name: RELEASE_DISTRIBUTION
               value: "name"
             - name: PORT
               value: "4000"
-            - name: MORA_HOST
-              value: "localhost"
+            - name: RELEASE_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RELEASE_NODE
+              value: "mora@$(RELEASE_NODE_IP)"
             - name: RELEASE_COOKIE
-              value: "secret"
-
+              valueFrom:
+                secretKeyRef:
+                  name: mora-cluster
+                  key: ERLANG_COOKIE
+          ports:
+            - name: epmd
+              containerPort: 4369
+              protocol: TCP
+            - name: http
+              containerPort: 4000
+              protocol: TCP
 ---
-kind: Service
 apiVersion: v1
-
+kind: Service
 metadata:
-  name: mora-nodes
+  name: mora-svc-headless
   namespace: mora
+  labels:
+    app.kubernetes.io/name: mora
+    app.kubernetes.io/instance: mora-svc-headless
 spec:
+  type: ClusterIP
   clusterIP: None
-  selector:
-    app: mora
   ports:
-    - name: epmd
-      port: 4369
-      targetPort: 4369
+    - port: 4369
+      targetPort: epmd
+      protocol: TCP
+      name: epmd
+  selector:
+    app.kubernetes.io/name: mora
+    app.kubernetes.io/instance: mora-node
 
 ---
 kind: Service
 apiVersion: v1
 
 metadata:
-  name: mora-service
+  name: mora-svc-api
   namespace: mora
+  labels:
+    app.kubernetes.io/name: mora
+    app.kubernetes.io/instance: mora-svc-api
 spec:
   type: LoadBalancer
   selector:
-    app: mora
+    app.kubernetes.io/name: mora
+    app.kubernetes.io/instance: mora-node
   ports:
     - port: 8000
       targetPort: 4000
