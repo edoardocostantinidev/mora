@@ -7,8 +7,8 @@ defmodule Mora.Application do
   require Logger
   @impl true
   def start(_type, _args) do
-    port = Application.fetch_env!(:mora, :http_port)
-    Logger.info("Starting Mora DB on port #{port}")
+    port = System.get_env("PORT", "4000")
+    Logger.info("Starting Mora DB on port #{inspect(port)}")
 
     children = [
       {Cluster.Supervisor, [Application.fetch_env!(:libcluster, :topologies)]},

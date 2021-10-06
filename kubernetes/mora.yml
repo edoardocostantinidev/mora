@@ -1,0 +1,74 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: mora
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mora
+  namespace: mora
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mora
+  template:
+    metadata:
+      labels:
+        app: mora
+    spec:
+      containers:
+        - name: mora
+          image: edgardking/mora:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RELEASE_NODE
+              value: "mora@$(MY_POD_IP)"
+            - name: RELEASE_DISTRIBUTION
+              value: "name"
+            - name: PORT
+              value: "4000"
+            - name: MORA_HOST
+              value: "localhost"
+            - name: RELEASE_COOKIE
+              value: "secret"
+
+---
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: mora-nodes
+  namespace: mora
+spec:
+  clusterIP: None
+  selector:
+    app: mora
+  ports:
+    - name: epmd
+      port: 4369
+      targetPort: 4369
+
+---
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: mora-service
+  namespace: mora
+spec:
+  type: LoadBalancer
+  selector:
+    app: mora
+  ports:
+    - port: 8000
+      targetPort: 4000
