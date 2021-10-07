@@ -1,4 +1,4 @@
-z MORA
+MORA
 
 mora is a tool capable of streaming scheduled events to every client connected.
 
