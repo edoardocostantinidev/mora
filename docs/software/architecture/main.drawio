@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="rVW9Xq6m_tmSxOatVOXA" name="Page-1">
-        <mxGraphModel dx="734" dy="624" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="674" dy="634" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -25,19 +25,19 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="38" value="MoraDB.API" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="38" value="Mora.API" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="260" y="260" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="40" value="MoraDB.Database" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="40" value="Mora.Database" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="460" y="140" width="140" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="42" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="42" value="Mora.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="460" y="390" width="140" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="44" value="Event Scheduling" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" parent="1" vertex="1">
                     <mxGeometry x="40" y="90" width="210" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="54" value="MoraDB.Database" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="54" value="Mora.Database" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="460" y="560" width="160" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="59" value="fill temporal queue with new events via range query" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="55" target="54" edge="1">
@@ -45,7 +45,7 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="55" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="55" value="Mora.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="40" y="560" width="160" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="56" value="Event Queueing" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" parent="1" vertex="1">
@@ -62,7 +62,7 @@
                         <mxPoint x="380" y="900" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="65" value="MoraDB.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="65" value="Mora.TemporalQueue" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="580" y="860" width="160" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="66" value="Event Dispatching" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" parent="1" vertex="1">
@@ -114,10 +114,10 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="79" value="MoraDB.Dispatcher" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="79" value="Mora.Dispatcher" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="860" width="160" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="82" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;h1 style=&quot;color: rgb(0, 0, 0); font-family: helvetica; font-style: normal; letter-spacing: normal; text-align: left; text-indent: 0px; text-transform: none; word-spacing: 0px; background-color: rgb(248, 249, 250);&quot;&gt;&lt;span style=&quot;font-size: 12px ; font-weight: 400&quot;&gt;if the api process dies in between these two instructions, it will issue a revalidate message to all temporal queues upon restart.&lt;/span&gt;&lt;/h1&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                <mxCell id="82" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;h1 style=&quot;color: rgb(0, 0, 0); font-family: helvetica; font-style: normal; letter-spacing: normal; text-align: left; text-indent: 0px; text-transform: none; word-spacing: 0px; background-color: rgb(248, 249, 250);&quot;&gt;&lt;span style=&quot;font-size: 12px ; font-weight: 400&quot;&gt;if the api process dies in between these two instructions, it will issue a revalidate message to all temporal queues upon restart.&lt;/span&gt;&lt;/h1&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
                     <mxGeometry x="400" y="230" width="250" height="120" as="geometry"/>
                 </mxCell>
             </root>

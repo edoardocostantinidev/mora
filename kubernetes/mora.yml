@@ -39,11 +39,11 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              cpu: "500m"
-              memory: "1024Mi"
+              cpu: "128m"
+              memory: "256Mi"
             limits:
-              cpu: "1000m"
-              memory: "2048Mi"
+              cpu: "512m"
+              memory: "1024Mi"
           env:
             - name: RELEASE_DISTRIBUTION
               value: "name"
