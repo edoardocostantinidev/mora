@@ -1,6 +1,6 @@
 defmodule Mora.Events.Router do
   use Plug.Router
-  alias Mora.Events
+
   plug(:match)
   plug(:dispatch)
 
@@ -22,8 +22,8 @@ defmodule Mora.Events.Router do
       Map.put(event, :id, "#{event.createdAt}-#{event.fireAt}-#{event_hash}")
     end)
     |> Enum.each(fn event ->
-      Database.Mnesia.save(event)
-      TemporalQueue.Priority.notify(event)
+      Mora.Events.Database.Mnesia.save(event)
+      Mora.Events.TemporalQueue.Priority.notify(event)
     end)
   end
 end
