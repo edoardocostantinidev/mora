@@ -55,7 +55,16 @@ defmodule Mora.Events.TemporalQueue.Priority do
   end
 
   def handle_cast({:notify, event}, state) do
-    {:ok, new_state} = notify(event, state)
+    {_min, max, size, _pq} = state
+
+    is_space_available = size < @max_size
+    is_event_in_range = event.fireAt < max
+
+    Logger.debug(
+      "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range}"
+    )
+
+    new_state = enqueue(event, state, is_space_available, is_event_in_range)
     {:noreply, new_state}
   end
 
@@ -90,17 +99,9 @@ defmodule Mora.Events.TemporalQueue.Priority do
   """
   def max_size, do: @max_size
 
-  def notify(event, state) do
-    {_min, max, size, _pq} = state
-
-    is_space_available = size < @max_size
-    is_event_in_range = event.fireAt < max
-
-    Logger.debug(
-      "Handling :notify event: #{event.id} for #{event.category}.\nSpace Available in queue:#{@max_size - size}\nEvent is in range: #{is_event_in_range}"
-    )
-
-    {:ok, enqueue(event, state, is_space_available, is_event_in_range)}
+  def notify(event) do
+    GenServer.cast(Mora.Events.TemporalQueue.Priority, {:notify, event})
+    :ok
   end
 
   defp enqueue(event, state, false, true) do

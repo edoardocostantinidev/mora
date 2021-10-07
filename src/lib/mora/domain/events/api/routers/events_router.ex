@@ -1,20 +1,8 @@
 defmodule Mora.Events.Router do
   use Plug.Router
-
+  alias Mora.Events
   plug(:match)
   plug(:dispatch)
-
-  get "/" do
-    {:ok, events} = Mora.Events.Database.Mnesia.get_from()
-
-    events =
-      events
-      |> Enum.map(fn event -> Map.delete(event, :__meta__) end)
-
-    conn
-    |> Plug.Conn.put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(events))
-  end
 
   post "/" do
     {:ok, body, conn} =
@@ -34,8 +22,8 @@ defmodule Mora.Events.Router do
       Map.put(event, :id, "#{event.createdAt}-#{event.fireAt}-#{event_hash}")
     end)
     |> Enum.each(fn event ->
-      Mora.Events.Database.Mnesia.save(event)
-      GenServer.cast(Mora.Events.TemporalQueue.Priority, {:notify, event})
+      Database.Mnesia.save(event)
+      TemporalQueue.Priority.notify(event)
     end)
   end
 end

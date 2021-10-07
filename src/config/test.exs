@@ -6,6 +6,6 @@ config :logger,
 config :libcluster,
   topologies: [
     test: [
-      strategy: Cluster.Strategy.LocalEpmd
+      strategy: Cluster.Strategy.Gossip
     ]
   ]

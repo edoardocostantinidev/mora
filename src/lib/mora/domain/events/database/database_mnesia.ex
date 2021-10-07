@@ -26,19 +26,23 @@ defmodule Mora.Events.Database.Mnesia do
     Memento.Table.create(Mora.Event, disc_copies: nodes)
     Logger.debug("Created tables on ${nodes}")
 
+    Logger.debug("Joining pg group #{__MODULE__}")
+    :pg.join(__MODULE__, self())
+    Logger.debug("Joined pg group #{__MODULE__}")
+
     Logger.debug("Initialized Mnesia")
     {:ok, {}}
   end
 
   def save(event) do
     Logger.debug("saving #{event.id} locally")
-    GenServer.cast(__MODULE__, {:save, event})
+    GenServer.cast(__MODULE__, {:save, event, true})
     Logger.debug("saved #{event.id} locally")
 
     {:ok}
   end
 
-  def handle_cast({:save, event}, state) do
+  def handle_cast({:save, event, false}, state) do
     Logger.debug("writing event #{event.id} to disk")
 
     Memento.transaction!(fn ->
@@ -46,6 +50,27 @@ defmodule Mora.Events.Database.Mnesia do
     end)
 
     Logger.debug("wrote event #{event.id} to disk")
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:save, event, true}, state) do
+    Logger.debug("writing event #{event.id} to disk")
+
+    Memento.transaction!(fn ->
+      Memento.Query.write(event)
+    end)
+
+    Logger.debug("wrote event #{event.id} to disk")
+
+    Logger.debug("sending save event to other nodes")
+
+    :pg.get_members(__MODULE__)
+    |> Enum.filter(fn pid -> pid != self() end)
+    |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event}) end)
+
+    Logger.debug("sent save event to other nodes")
+
     {:noreply, state}
   end
 
