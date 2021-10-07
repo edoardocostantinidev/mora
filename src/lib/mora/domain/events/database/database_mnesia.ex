@@ -16,7 +16,8 @@ defmodule Mora.Events.Database.Mnesia do
       Logger.debug("Dir ${path} created.")
     end
 
-    nodes = [node() | Node.list()]
+    # nodes list was here
+    nodes = [node()]
     Logger.debug("Retrieved ${nodes}")
     :rpc.multicall(nodes, Memento, :stop, [])
     Memento.Schema.create(nodes)

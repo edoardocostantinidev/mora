@@ -1,7 +1,7 @@
 
 import WebSocket from 'ws';
 
-const ws = new WebSocket('ws://localhost:4000/ws/events/category', {
+const ws = new WebSocket('ws://localhost:8000/ws/events/category', {
     perMessageDeflate: false,
 
 });

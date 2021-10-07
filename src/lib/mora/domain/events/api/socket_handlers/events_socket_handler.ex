@@ -31,6 +31,7 @@ defmodule Mora.Events.SocketHandler do
 
   def websocket_info(info, state) do
     info = Map.put_new(info, :count, state.count + 1)
+    info = Map.put_new(info, :received_from, node())
     state = Map.put(state, :count, state.count + 1)
     {:reply, {:text, Poison.encode!(info)}, state}
   end

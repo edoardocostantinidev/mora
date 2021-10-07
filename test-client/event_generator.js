@@ -11,7 +11,7 @@ async function main() {
         var options = {
             'method': 'POST',
             'hostname': 'localhost',
-            'port': 4000,
+            'port': 8000,
             'path': '/events',
             'headers': {
                 'Content-Type': 'application/json'
@@ -46,10 +46,11 @@ async function main() {
         }
     }
 ]`;
-
+console.log(index);
         req.write(postData);
 
         req.end();
+	    await sleep(100);
     }
 }
 function sleep(ms) {
