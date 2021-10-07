@@ -44,6 +44,12 @@ spec:
             limits:
               cpu: "512m"
               memory: "1024Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 3
+            periodSeconds: 3
           env:
             - name: RELEASE_DISTRIBUTION
               value: "name"
