@@ -3,7 +3,15 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: mora
-
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mora-cluster
+  namespace: mora
+type: Opaque
+data:
+  ERLANG_COOKIE: c2VjcmV0Cg==
 ---
 apiVersion: apps/v1
 kind: Deployment

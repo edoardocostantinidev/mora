@@ -1,4 +1,4 @@
-# MORA
+z MORA
 
 mora is a tool capable of streaming scheduled events to every client connected.
 
@@ -73,4 +73,8 @@ I'm new to elixir so feel free to create issues and PRs for best practices, nami
 
 ### Test
 
-run `elixirc .\test\domain\events\model\event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it). 
+run `elixirc .\test\domain\events\model\event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it).
+
+### NB
+
+There are a lot of things that should be done differently, being an on-boarding project I couldn't work on it all work day, there are a lot of worst-practices (e.g. secrets on k8s, distributed computation done wrong, no regard whatsoever to backups etc.). With time hopefully I will address each issue and build something good and stable... that probably no one will ever use :D 
