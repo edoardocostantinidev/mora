@@ -174,6 +174,7 @@ defmodule Mora.Events.TemporalQueue.Priority do
     |> Enum.each(fn event ->
       event_corrected = Map.put_new(event, :dispatched_from, node())
 
+      # move outside
       :pg.get_members(Mora.Events.Dispatchers.Websocket)
       |> Enum.each(fn pid -> GenServer.cast(pid, {:dispatch, event_corrected}) end)
     end)
