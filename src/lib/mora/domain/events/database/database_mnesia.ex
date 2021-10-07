@@ -39,7 +39,7 @@ defmodule Mora.Events.Database.Mnesia do
     GenServer.cast(__MODULE__, {:save, event, true})
     Logger.debug("saved #{event.id} locally")
 
-    {:ok}
+    :ok
   end
 
   def handle_cast({:save, event, false}, state) do
@@ -67,7 +67,7 @@ defmodule Mora.Events.Database.Mnesia do
 
     :pg.get_members(Mora.Events.Database.Mnesia)
     |> Enum.filter(fn pid -> pid != self() end)
-    |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event}) end)
+    |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event, false}) end)
 
     Logger.debug("sent save event to other nodes")
 
@@ -75,7 +75,7 @@ defmodule Mora.Events.Database.Mnesia do
   end
 
   def handle_cast(cast, state) do
-    Logger.warn("Received a weird cast on #{__MODULE__}: #{cast} #{state}")
+    Logger.warn("Received a weird cast on #{__MODULE__}: #{inspect(cast)} #{inspect(state)}")
 
     {:noreply, state}
   end
