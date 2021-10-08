@@ -64,9 +64,10 @@ defmodule Mora.Events.Database.Mnesia do
     Logger.debug("wrote event #{event.id} to disk")
 
     Logger.debug("sending save event to other nodes")
+    self_pid = self()
 
     :pg.get_members(Mora.Events.Database.Mnesia)
-    |> Enum.filter(fn pid -> pid != self() end)
+    |> Enum.filter(fn pid -> pid != self_pid end)
     |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event, false}) end)
 
     Logger.debug("sent save event to other nodes")
