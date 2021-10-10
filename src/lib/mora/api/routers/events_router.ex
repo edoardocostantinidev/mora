@@ -1,4 +1,4 @@
-defmodule Mora.Api.Router do
+defmodule Mora.Api.Routers.Event do
   use Plug.Router
 
   plug(:match)

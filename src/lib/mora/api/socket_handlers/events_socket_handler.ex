@@ -1,4 +1,4 @@
-defmodule Mora.Api.SocketHandler do
+defmodule Mora.Api.SocketHandler.Event.Event do
   @behaviour :cowboy_websocket
   require Logger
 
