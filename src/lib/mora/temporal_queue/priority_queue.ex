@@ -1,17 +1,17 @@
-defmodule Mora.Events.TemporalQueue.Priority do
+defmodule Mora.TemporalQueue.Priority do
   @moduledoc """
   Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
   Module's state is a tuple containing `{current_min, current_max, current_size, pqueue}`. Respectively the current minimum fireAt timestamp, the current maximum fireAt timestamp, the current size and the queue itself.
-
+  
   Whenever an event is sent here and the queue has space available it will always be enqueued.
   If the queue does not have space then it will check if the event falls in range.
   If it falls in queue's range then it will be enqueued and the last item will be removed.
   Item that do not fall in queue's range will be discarded.
-
+  
   @moduledoc since: "0.1.0"
   """
 
-  @behaviour Mora.Events.TemporalQueue
+  @behaviour Mora.TemporalQueue
   require Logger
   use GenServer
   @max_size 1000
@@ -38,13 +38,13 @@ defmodule Mora.Events.TemporalQueue.Priority do
 
   @doc """
   main cast handler, available options are:
-
+  
   - `:tick` handles `tick` casts. Each tick represents the delta-t the temporal queue loops around.
   If @tick is set to 999 then the queue will try to dispatch event every 999 ms.
   It's basically the time resolution of Mora.
   - `:clear` clears the queue.
   - `{:notify,event}` handles notification casts. Each event is notified to the queue so it can be enqueued or discarded.
-
+  
   """
   def handle_cast(:tick, state) do
     t1 = :erlang.system_time(:microsecond)
@@ -100,7 +100,7 @@ defmodule Mora.Events.TemporalQueue.Priority do
   def max_size, do: @max_size
 
   def notify(event) do
-    GenServer.cast(Mora.Events.TemporalQueue.Priority, {:notify, event})
+    GenServer.cast(Mora.TemporalQueue.Priority, {:notify, event})
     :ok
   end
 
@@ -175,7 +175,7 @@ defmodule Mora.Events.TemporalQueue.Priority do
       event_corrected = Map.put_new(event, :dispatched_from, node())
 
       # move outside
-      :pg.get_members(Mora.Events.Dispatchers.Websocket)
+      :pg.get_members(Mora.Dispatchers.Websocket)
       |> Enum.each(fn pid -> GenServer.cast(pid, {:dispatch, event_corrected}) end)
     end)
 
@@ -187,7 +187,7 @@ defmodule Mora.Events.TemporalQueue.Priority do
     new_size = Enum.count(new_pq)
 
     if Enum.count(consumed_pq) > 0 && size == @max_size do
-      GenServer.call(Mora.Events.Database.Mnesia, {:get, current_max + 1, max_events_to_retrieve})
+      GenServer.call(Mora.Database.Mnesia, {:get, current_max + 1, max_events_to_retrieve})
       |> Enum.each(fn event -> GenServer.cast(self(), {:notify, event}) end)
     end
 

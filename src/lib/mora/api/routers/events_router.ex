@@ -1,4 +1,4 @@
-defmodule Mora.Events.Router do
+defmodule Mora.Api.Router do
   use Plug.Router
 
   plug(:match)
@@ -14,7 +14,7 @@ defmodule Mora.Events.Router do
   end
 
   defp process_events(events) do
-    events = Poison.decode!(events, as: [%Mora.Event{}])
+    events = Poison.decode!(events, as: [%Mora.Model.Event{}])
 
     events
     |> Enum.map(fn event ->
@@ -22,8 +22,8 @@ defmodule Mora.Events.Router do
       Map.put(event, :id, "#{event.createdAt}-#{event.fireAt}-#{event_hash}")
     end)
     |> Enum.each(fn event ->
-      Mora.Events.Database.Mnesia.save(event)
-      Mora.Events.TemporalQueue.Priority.notify(event)
+      Mora.Database.Mnesia.save(event)
+      Mora.TemporalQueue.Priority.notify(event)
     end)
   end
 end

@@ -1,11 +1,11 @@
-defmodule Mora.Test.Events.Database do
+defmodule Mora.Test.Database do
   use ExUnit.Case
   doctest Mora
-  alias Mora.Events.Database.Mnesia
-  alias Mora.Events.Generator
+  alias Mora.Database.Mnesia
+  alias Mora.Support.Generator
 
   setup _ do
-    Memento.Table.clear(Mora.Event)
+    Memento.Table.clear(Mora.Model.Event)
   end
 
   test "save function should save an event to database" do

@@ -1,5 +1,5 @@
-defmodule Mora.Events.Database.Mnesia do
-  @behaviour Mora.Events.Database
+defmodule Mora.Database.Mnesia do
+  @behaviour Mora.Database
   use GenServer
   require Logger
 
@@ -23,7 +23,7 @@ defmodule Mora.Events.Database.Mnesia do
     Memento.Schema.create(nodes)
     Logger.debug("Created schema on ${nodes}")
     :rpc.multicall(nodes, Memento, :start, [])
-    Memento.Table.create(Mora.Event, disc_copies: nodes)
+    Memento.Table.create(Mora.Model.Event, disc_copies: nodes)
     Logger.debug("Created tables on ${nodes}")
 
     Logger.debug("Joining pg group #{__MODULE__}")
@@ -66,7 +66,7 @@ defmodule Mora.Events.Database.Mnesia do
     Logger.debug("sending save event to other nodes")
     self_pid = self()
 
-    :pg.get_members(Mora.Events.Database.Mnesia)
+    :pg.get_members(Mora.Database.Mnesia)
     |> Enum.filter(fn pid -> pid != self_pid end)
     |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event, false}) end)
 
@@ -100,7 +100,7 @@ defmodule Mora.Events.Database.Mnesia do
 
     events =
       Memento.transaction!(fn ->
-        Memento.Query.all(Mora.Event)
+        Memento.Query.all(Mora.Model.Event)
       end)
 
     {:reply, events, state}
@@ -111,7 +111,7 @@ defmodule Mora.Events.Database.Mnesia do
 
     events =
       Memento.transaction!(fn ->
-        Memento.Query.all(Mora.Event)
+        Memento.Query.all(Mora.Model.Event)
       end)
       |> Enum.filter(fn event -> event.fireAt >= timestamp end)
       |> Enum.take(limit)

@@ -1,9 +1,9 @@
-defmodule Mora.Events.Dispatchers.Websocket do
-  @behaviour Mora.Events.Dispatcher
+defmodule Mora.Dispatchers.Websocket do
+  @behaviour Mora.Dispatcher
 
   require Logger
   use GenServer
-  alias Mora.Event
+  alias Mora.Model.Event
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(_opts) do

@@ -25,4 +25,4 @@ mora-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-/benchmarks/
+/benchmarks/output/**

@@ -25,9 +25,9 @@ defmodule Mora.Application do
           dispatch: PlugSocket.plug_cowboy_dispatch(Mora.Api)
         ]
       },
-      Mora.Events.TemporalQueue.Priority,
-      Mora.Events.Database.Mnesia,
-      Mora.Events.Dispatchers.Websocket,
+      Mora.TemporalQueue.Priority,
+      Mora.Database.Mnesia,
+      Mora.Dispatchers.Websocket,
       {Registry, keys: :duplicate, name: Registry.Mora}
     ]
 
