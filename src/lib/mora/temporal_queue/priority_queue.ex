@@ -90,7 +90,8 @@ defmodule Mora.TemporalQueue.Priority do
      %{
        queue_size: size,
        queue_temporal_min: min,
-       queue_temporal_max: max
+       queue_temporal_max: max,
+       queue_category: __MODULE__
      }, state}
   end
 
