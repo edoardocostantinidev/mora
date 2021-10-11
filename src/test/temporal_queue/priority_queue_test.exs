@@ -23,6 +23,23 @@ defmodule Mora.Test.TemporalQueue.Priority do
     assert max == event.fireAt
   end
 
+  test "pqueue should return correct info when called with :info" do
+    event = Generator.get_random_event()
+    GenServer.cast(Priority, {:notify, event})
+
+    %{
+      queue_size: queue_size,
+      queue_temporal_min: min,
+      queue_temporal_max: max,
+      queue_category: queue_category
+    } = GenServer.call(Priority, :info)
+
+    assert queue_size == 1
+    assert queue_category == Priority
+    assert min == event.fireAt
+    assert max == event.fireAt
+  end
+
   test "pqueue should not insert new item when notified of an event and the pqueue doesn't have space and the event is not in range" do
     max_size = Priority.max_size()
 

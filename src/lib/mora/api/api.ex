@@ -5,8 +5,5 @@ defmodule Mora.Api do
   plug(:match)
   plug(:dispatch)
   forward("/events", to: Mora.Api.Routers.Event)
-
-  get "/health" do
-    send_resp(conn, 200, "OK")
-  end
+  forward("/status", to: Mora.Api.Routers.Status)
 end
