@@ -5,7 +5,7 @@ mora is a tool capable of streaming scheduled events to every client connected.
 ## Why mora? 
 
 I always faced myself with tasks that needed to perform some kind of action (sending an email, notify a client, process stuff) but in delayed manner. I would often use `cron` like libraries and tools to achieve this kind of tasks, but I don't like this kind of approach, to me it doesn't seem "scalable".
-I recently join [Prima](prima.it) and as an on-boarding project I decided to give it a shot.
+I recently join [Prima](https://www.prima.it) and as an on-boarding project I decided to give it a shot.
 
 
 ## How mora?
