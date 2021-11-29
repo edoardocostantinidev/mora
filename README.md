@@ -20,9 +20,10 @@ An `event` is a single piece of information stored in moradb, with some basic pr
 - `data`, custom data field
 
 Mora is currently developed as an `elixir` application that consists in 4 distinct layers: 
+
 ## Alohomora?
 
-![Gif](https://tenor.com/view/alohomora-wand-spell-magic-spell-harry-potter-gif-16852614)
+![Gif](https://c.tenor.com/sx6rUhrAM1sAAAAC/alohomora-wand.gif)
 
 ### API 
 
