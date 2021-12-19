@@ -25,7 +25,8 @@ defmodule Mora.Application do
           dispatch: PlugSocket.plug_cowboy_dispatch(Mora.Api)
         ]
       },
-      Mora.TemporalQueue.Priority,
+      {Mora.TemporalQueue.DynamicSupervisor,
+       strategy: :one_for_one, name: Mora.TemporalQueue.DynamicSupervisor},
       Mora.Database.Mnesia,
       Mora.Dispatchers.Websocket,
       {Registry, keys: :duplicate, name: Registry.Mora}

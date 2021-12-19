@@ -2,31 +2,33 @@ defmodule Mora.TemporalQueue.Priority do
   @moduledoc """
   Priority Temporal queues store events in memory in a priority queue structure where fireAt timestamp is the sort key.
   Module's state is a tuple containing `{current_min, current_max, current_size, pqueue}`. Respectively the current minimum fireAt timestamp, the current maximum fireAt timestamp, the current size and the queue itself.
-  
+
   Whenever an event is sent here and the queue has space available it will always be enqueued.
   If the queue does not have space then it will check if the event falls in range.
   If it falls in queue's range then it will be enqueued and the last item will be removed.
   Item that do not fall in queue's range will be discarded.
-  
+
   @moduledoc since: "0.1.0"
   """
 
-  @behaviour Mora.TemporalQueue
   require Logger
   use GenServer
   @max_size 1000
   @tick 999
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(%{category: category}) do
+    GenServer.start_link(__MODULE__, {:ok, category}, name: __MODULE__)
   end
 
   @doc """
   starts up a temporal queue with priority implementation.
   """
   @spec init(any) :: {:ok, {0, 0, 0, []}}
-  def init(_) do
+  def init({:ok, category}) do
+    Logger.info("joining PGs")
+    :pg.join("system:queue", self())
+    :pg.join("#{category}:queue", self())
     Logger.info("Initializing TemporalQueue")
     schedule_tick()
     pqueue = []
@@ -38,13 +40,13 @@ defmodule Mora.TemporalQueue.Priority do
 
   @doc """
   main cast handler, available options are:
-  
+
   - `:tick` handles `tick` casts. Each tick represents the delta-t the temporal queue loops around.
   If @tick is set to 999 then the queue will try to dispatch event every 999 ms.
   It's basically the time resolution of Mora.
   - `:clear` clears the queue.
   - `{:notify,event}` handles notification casts. Each event is notified to the queue so it can be enqueued or discarded.
-  
+
   """
   def handle_cast(:tick, state) do
     t1 = :erlang.system_time(:microsecond)
@@ -99,11 +101,6 @@ defmodule Mora.TemporalQueue.Priority do
   returns the max_size of this queue
   """
   def max_size, do: @max_size
-
-  def notify(event) do
-    GenServer.cast(Mora.TemporalQueue.Priority, {:notify, event})
-    :ok
-  end
 
   defp enqueue(event, state, false, true) do
     {min, max, size, pq} = state

@@ -23,7 +23,7 @@ defmodule Mora.Api.Routers.Event do
     end)
     |> Enum.each(fn event ->
       Mora.Database.Mnesia.save(event)
-      Mora.TemporalQueue.Priority.notify(event)
+      Mora.TemporalQueue.DynamicSupervisor.notify(event)
     end)
   end
 end
