@@ -5,7 +5,7 @@ mora is a tool capable of streaming scheduled events to every client connected.
 ## Why mora? 
 
 I always faced myself with tasks that needed to perform some kind of action (sending an email, notify a client, process stuff) but in delayed manner. I would often use `cron` like libraries and tools to achieve this kind of tasks, but I don't like this kind of approach, to me it doesn't seem "scalable".
-I recently join [Prima](https://www.prima.it) and as an on-boarding project I decided to give it a shot.
+I recently join [Prima](https://www.prima.it) and as an on-boarding project I decided to give a shot at building a distributed scheduler.
 
 
 ## How mora?
@@ -42,7 +42,7 @@ The API layer handles all clients requests (e.g. event scheduling). It's basical
 
 Once the event is received the api sends it to the **Database** layer and the **Temporal Queue**.
 
-### DATABASE
+### Database
 
 The database layer, as the name suggest, it's responsible for saving events on disk. Currently database is implemented with `Mnesia` and the `Memento` library. If mora is deployed in a cluster (see **Deploy** section) the database layer will propagate any event it receives to other nodes.
 
@@ -77,7 +77,7 @@ I'm new to elixir so feel free to create issues and PRs for best practices, nami
 
 ### Test
 
-run `elixirc .\test\domain\events\model\event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it).
+run `elixirc test/support/event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it).
 
 ### NB
 

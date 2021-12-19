@@ -1,12 +1,16 @@
-defmodule Mora.Test.TemporalQueue.Priority do
+defmodule Mora.Test.TemporalQueue do
+  @moduledoc """
+  This module tests the temporal queue.
+  """
+
   use ExUnit.Case
   doctest Mora
-  alias Mora.TemporalQueue.Priority
+  alias Mora.TemporalQueue, as: Priority
   alias Mora.Support.Generator
 
   setup _ do
     Memento.Table.clear(Mora.Model.Event)
-    start_supervised(Priority)
+    {:ok, _} = start_supervised({Priority, %{category: "test"}})
     on_exit(fn -> GenServer.cast(Priority, :clear) end)
     :ok
   end

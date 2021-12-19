@@ -25,6 +25,7 @@ defmodule Mora.Application do
           dispatch: PlugSocket.plug_cowboy_dispatch(Mora.Api)
         ]
       },
+      Mora.TemporalQueue.Manager,
       {Mora.TemporalQueue.DynamicSupervisor,
        strategy: :one_for_one, name: Mora.TemporalQueue.DynamicSupervisor},
       Mora.Database.Mnesia,
