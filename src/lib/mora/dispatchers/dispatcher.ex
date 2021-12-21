@@ -1,4 +1,8 @@
 defmodule Mora.Dispatcher do
+  @moduledoc """
+  Behaviour for dispatching events to the appropriate handlers.
+  """
+
   @doc """
   dispatches an event
   """

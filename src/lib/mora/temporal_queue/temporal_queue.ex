@@ -15,8 +15,9 @@ defmodule Mora.TemporalQueue do
   use GenServer
   @max_size 1000
   @tick 999
-  @pg_name "temporal_queues:"
+  @pg_name "temporal_queues"
   @pg_system_name "system:temporal_queues"
+  @behaviour Mora.CommonBehaviour.PgItem
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(%{category: category}) do
@@ -28,10 +29,8 @@ defmodule Mora.TemporalQueue do
   """
   @spec init(any) :: {:ok, {0, 0, 0, []}}
   def init({:ok, category}) do
-    Logger.info("joining PGs")
     :pg.join(@pg_system_name, self())
-    :pg.join("#{@pg_name}:#{category}", self())
-    Logger.info("Initializing TemporalQueue")
+    :pg.join(pg_name(category), self())
     schedule_tick()
     pqueue = []
     current_min = 0
@@ -51,10 +50,8 @@ defmodule Mora.TemporalQueue do
 
   """
   def handle_cast(:tick, state) do
-    t1 = :erlang.system_time(:microsecond)
     new_state = do_tick(state)
-    t2 = :erlang.system_time(:microsecond)
-    Logger.info("Tick performed in #{t2 - t1}µs")
+
     {:noreply, new_state}
   end
 
@@ -81,9 +78,7 @@ defmodule Mora.TemporalQueue do
   end
 
   def handle_cast(msg, state) do
-    Logger.warn("Received a weird message on temporal queue:\n#{msg} ")
-
-    Logger.warn("Ignoring ")
+    Logger.warn("Received a weird message on temporal queue:\n#{inspect(msg)}")
     {:noreply, state}
   end
 
@@ -164,7 +159,6 @@ defmodule Mora.TemporalQueue do
   defp do_tick(state) do
     {min, max, size, pq} = state
     time = :os.system_time(:millisecond)
-    Logger.debug("Handling :tick #{time}\nMin:#{min} Max:#{max} QueueSize: #{size}")
 
     consumed_pq =
       pq
@@ -174,9 +168,12 @@ defmodule Mora.TemporalQueue do
     |> Enum.each(fn event ->
       event_corrected = Map.put_new(event, :dispatched_from, node())
 
-      # move outside
-      :pg.get_members(Mora.Dispatchers.Websocket)
-      |> Enum.each(fn pid -> GenServer.cast(pid, {:dispatch, event_corrected}) end)
+      event.category
+      |> Mora.Dispatchers.Websocket.pg_name()
+      |> :pg.get_members()
+      |> Enum.each(fn pid ->
+        GenServer.cast(pid, {:dispatch, event_corrected})
+      end)
     end)
 
     new_pq = pq -- consumed_pq
@@ -195,14 +192,14 @@ defmodule Mora.TemporalQueue do
   end
 
   defp schedule_tick() do
-    Logger.debug("Scheduling Tick")
     self_pid = self()
 
     Task.start(fn ->
       :timer.sleep(@tick)
       GenServer.cast(self_pid, :tick)
     end)
-
-    Logger.debug("Done")
   end
+
+  def pg_name(category), do: @pg_name <> ":" <> category
+  def pg_system_name(), do: @pg_system_name
 end
