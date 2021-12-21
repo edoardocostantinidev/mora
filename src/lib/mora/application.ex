@@ -29,8 +29,7 @@ defmodule Mora.Application do
       {Mora.TemporalQueue.DynamicSupervisor,
        strategy: :one_for_one, name: Mora.TemporalQueue.DynamicSupervisor},
       Mora.Database.Mnesia,
-      Mora.Dispatchers.Websocket,
-      {Registry, keys: :duplicate, name: Registry.Mora}
+      Mora.Dispatchers.Websocket
     ]
 
     opts = [strategy: :one_for_one, name: Mora.Supervisor]

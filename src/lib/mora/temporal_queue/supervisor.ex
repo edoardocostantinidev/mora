@@ -1,4 +1,7 @@
 defmodule Mora.TemporalQueue.DynamicSupervisor do
+  @moduledoc """
+  This module implements a supervisor for the dynamic queue.
+  """
   use DynamicSupervisor
 
   require Logger

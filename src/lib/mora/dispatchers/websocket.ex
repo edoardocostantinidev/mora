@@ -1,5 +1,13 @@
 defmodule Mora.Dispatchers.Websocket do
+  @moduledoc """
+  This module provides a websocket dispatcher.
+  """
+
   @behaviour Mora.Dispatcher
+  @behaviour Mora.CommonBehaviour.PgItem
+
+  @pg_name "dispatchers:websocket"
+  @pg_system_name "system:dispatchers:websocket"
 
   require Logger
   use GenServer
@@ -14,9 +22,7 @@ defmodule Mora.Dispatchers.Websocket do
   starts up a websocket dispatcher.
   """
   def init(_) do
-    Logger.info("Initializing Websocket dispatcher")
-    :ok = :pg.join(__MODULE__, self())
-    Logger.info("Websocket dispatcher initialized")
+    :ok = :pg.join(pg_name(""), self())
     {:ok, {}}
   end
 
@@ -27,18 +33,14 @@ defmodule Mora.Dispatchers.Websocket do
 
   @spec dispatch(Event.t()) :: {:ok}
   def dispatch(event) do
-    Logger.info("dispatching event #{event.id}")
+    event.category
+    |> Mora.Api.SocketHandler.Event.pg_name()
+    |> :pg.get_members()
+    |> Enum.each(&Process.send(&1, event, []))
 
-    Registry.Mora
-    |> Registry.dispatch(event.category, fn entries ->
-      for {pid, _} <- entries do
-        if pid != self() do
-          Process.send(pid, event, [])
-        end
-      end
-    end)
-
-    Logger.info("dispatched event #{event.id}")
     {:ok}
   end
+
+  def pg_name(_), do: @pg_name
+  def pg_system_name(), do: @pg_system_name
 end
