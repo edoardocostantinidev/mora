@@ -2,6 +2,8 @@ MORA
 
 mora is a tool capable of streaming scheduled events to every client connected.
 
+[![Tests](https://github.com/edoardocostantinidev/mora/actions/workflows/elixir.yml/badge.svg)](https://github.com/edoardocostantinidev/mora/actions/workflows/elixir.yml)
+
 ## Why mora? 
 
 I always faced myself with tasks that needed to perform some kind of action (sending an email, notify a client, process stuff) but in delayed manner. I would often use `cron` like libraries and tools to achieve this kind of tasks, but I don't like this kind of approach, to me it doesn't seem "scalable".
