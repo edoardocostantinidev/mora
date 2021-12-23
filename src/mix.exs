@@ -26,7 +26,7 @@ defmodule Mora.MixProject do
       {:benchee, "~> 1.0", only: :bench},
       {:benchee_html, "~> 1.0", only: :bench},
       {:cowboy, "~> 2.9.0"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:libcluster, "~> 3.3.0"},
       {:memento, "~> 0.3.2"},
