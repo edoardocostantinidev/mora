@@ -26,7 +26,8 @@ defmodule Mora.TemporalQueue.Manager do
     |> case do
       [] ->
         :pg.get_members(@pg_name)
-        |> Enum.each(&GenServer.cast(&1, {:spawn_and_notify, event}))
+        |> Enum.filter(fn pid -> pid != self() end)
+        |> Enum.each(&GenServer.call(&1, {:spawn_and_notify, event}))
 
       queues ->
         Enum.each(queues, &GenServer.cast(&1, {:notify, event}))
@@ -35,9 +36,16 @@ defmodule Mora.TemporalQueue.Manager do
     {:noreply, state}
   end
 
-  def handle_cast({:spawn_and_notify, event}, state) do
-    {:ok, queue} = Mora.TemporalQueue.DynamicSupervisor.start_temporal_queue(event.category)
-    GenServer.cast(queue, {:notify, event})
+  def handle_call({:spawn_and_notify, event}, state) do
+    spawn_and_notify(event)
     {:noreply, state}
   end
+
+  defp spawn_and_notify(event) do
+    {:ok, queue} = Mora.TemporalQueue.DynamicSupervisor.start_temporal_queue(event.category)
+    GenServer.cast(queue, {:notify, event})
+  end
+
+  def pg_name(_), do: @pg_name
+  def pg_system_name(), do: @pg_system_name
 end

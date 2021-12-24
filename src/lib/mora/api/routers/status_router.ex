@@ -1,5 +1,9 @@
 defmodule Mora.Api.Routers.Status do
+  @moduledoc """
+  This module contains the status router and healthchecks.
+  """
   use Plug.Router
+  alias Mora.TemporalQueue
 
   plug(:match)
   plug(:dispatch)
@@ -8,9 +12,12 @@ defmodule Mora.Api.Routers.Status do
     send_resp(conn, 200, "OK")
   end
 
-  get "/queue" do
+  get "/queues" do
     resp_body =
-      GenServer.call(Mora.TemporalQueue.Priority, :info)
+      :pg.get_members(TemporalQueue.pg_system_name())
+      |> Enum.map(fn pid ->
+        GenServer.call(pid, :info)
+      end)
       |> Poison.encode!()
 
     send_resp(conn, 200, resp_body)
