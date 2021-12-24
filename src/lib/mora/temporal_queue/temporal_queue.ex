@@ -74,7 +74,7 @@ defmodule Mora.TemporalQueue do
     current_min = 0
     current_max = 0
     current_size = 0
-    {:noreply, {current_min, current_max, current_size, pqueue}}
+    {:stop, :clear, {current_min, current_max, current_size, pqueue}}
   end
 
   def handle_cast(msg, state) do
@@ -89,8 +89,7 @@ defmodule Mora.TemporalQueue do
      %{
        queue_size: size,
        queue_temporal_min: min,
-       queue_temporal_max: max,
-       queue_category: __MODULE__
+       queue_temporal_max: max
      }, state}
   end
 

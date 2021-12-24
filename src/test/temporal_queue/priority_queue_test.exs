@@ -3,7 +3,7 @@ defmodule Mora.Test.TemporalQueue do
   This module tests the temporal queue.
   """
 
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest Mora
   alias Mora.TemporalQueue, as: Priority
   alias Mora.Support.Generator
@@ -11,7 +11,6 @@ defmodule Mora.Test.TemporalQueue do
   setup _ do
     Memento.Table.clear(Mora.Model.Event)
     {:ok, _} = start_supervised({Priority, %{category: "test"}})
-    on_exit(fn -> GenServer.cast(Priority, :clear) end)
     :ok
   end
 
@@ -34,12 +33,10 @@ defmodule Mora.Test.TemporalQueue do
     %{
       queue_size: queue_size,
       queue_temporal_min: min,
-      queue_temporal_max: max,
-      queue_category: queue_category
+      queue_temporal_max: max
     } = GenServer.call(Priority, :info)
 
     assert queue_size == 1
-    assert queue_category == Priority
     assert min == event.fireAt
     assert max == event.fireAt
   end

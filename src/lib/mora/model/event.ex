@@ -1,4 +1,7 @@
 defmodule Mora.Model.Event do
+  @moduledoc """
+  Event model.
+  """
   use Memento.Table,
     attributes: [
       :id,
