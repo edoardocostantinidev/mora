@@ -34,7 +34,7 @@ defmodule Mora.MixProject do
       {:plug, "~> 1.12.1"},
       {:plug_cowboy, "~> 2.5.2"},
       {:plug_socket, "~> 0.1.0"},
-      {:poison, "~> 3.0"},
+      {:poison, "~> 5.0"},
       {:prioqueue, "~> 0.2.0"},
       {:priority_queue, "~> 1.0"}
     ]
