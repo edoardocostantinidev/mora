@@ -1,6 +1,6 @@
 MORA
 
-mora is a tool capable of streaming scheduled events to every client connected.
+mora is a distributed event scheduler capable of handling both recurring and one-off event dispatching.
 
 [![Tests](https://github.com/edoardocostantinidev/mora/actions/workflows/elixir.yml/badge.svg)](https://github.com/edoardocostantinidev/mora/actions/workflows/elixir.yml)
 
