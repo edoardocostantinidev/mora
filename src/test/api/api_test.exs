@@ -19,6 +19,9 @@ defmodule Mora.Test.Api do
     end
 
     test "should_return_200_with_no_body_if_no_queue_active" do
+      :pg.get_members("system:temporal_queues")
+      |> Enum.each(fn pid -> :pg.leave("system:temporal_queues", pid) end)
+
       conn = :get |> conn("/status/queues", %{}) |> Api.call(@options)
       assert(conn.status == 200)
       assert(conn.resp_body == "[]")
@@ -34,10 +37,9 @@ defmodule Mora.Test.Api do
         |> List.wrap()
         |> Poison.encode!()
 
-      conn =
-        :post
-        |> conn("/events", body)
-        |> Api.call(@options)
+      :post
+      |> conn("/events", body)
+      |> Api.call(@options)
 
       conn =
         :get

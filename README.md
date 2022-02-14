@@ -79,7 +79,7 @@ I'm new to elixir so feel free to create issues and PRs for best practices, nami
 
 ### Test
 
-run `elixirc test/support/event_generator.exs` before `mix test`, tests use an event generator that has to be compiled manually (don't know how to fix it).
+run `mix test` :)
 
 ### NB
 
