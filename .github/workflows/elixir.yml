@@ -28,9 +28,6 @@ jobs:
     - name: Install dependencies
       working-directory: ./src/
       run: mix deps.get
-    - name: Compile support files
-      working-directory: ./src/
-      run: elixirc test/support/event_generator.exs 
     - name: Run tests
       working-directory: ./src/
       run: mix test
