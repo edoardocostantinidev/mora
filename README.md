@@ -48,7 +48,7 @@ Once the event is received the api sends it to the **Database** layer and the **
 
 The database layer, as the name suggest, it's responsible for saving events on disk. Currently database is implemented with `Mnesia` and the `Memento` library. If mora is deployed in a cluster (see **Deploy** section) the database layer will propagate any event it receives to other nodes.
 
-As of right now the database serves as a mere storage tool that gets queried by the **Temporal Queue** layer.
+As of right now the database serves as a mere storage tool that gets queried by the **Temporal Queue** layer, I honestly don't know if this layer is actually necessary, This is a scheduler, not a database, so I'll probably end up ditching it.
 
 ### Temporal Queue
 
@@ -69,7 +69,7 @@ in order:
 1) `kubectl apply -f kubernetes/mora.yaml`
 2) `node test-client/ws.js` and on a separate shell `node test-client/event-generator.js`
 
-As of right now you will receive a lot of debug info on your events, is perfectly normal. Also try and mess around with replicas on your k8s cluster and see what happens. You can event spawn other generators or test via postman. 
+As of right now you will receive a lot of debug info on your events, is perfectly normal. Also try and mess around with replicas on your k8s cluster and see what happens. You can even spawn other generators or test via postman. 
 
 If you want to test it out in local make sure to use `dev` environment so that `libcluster` topologies don't interfere with `mora`.
 
