@@ -119,7 +119,7 @@ defmodule Mora.Database.Mnesia do
     {:reply, events, state}
   end
 
-  def handle_call(call, state) do
+  def handle_call(call, _, state) do
     Logger.warn("Received a weird call on #{__MODULE__}: #{call} #{state}")
 
     {:noreply, state}

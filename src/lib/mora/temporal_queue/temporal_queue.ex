@@ -36,6 +36,7 @@ defmodule Mora.TemporalQueue do
     current_min = 0
     current_max = 0
     current_size = 0
+
     {:ok, {current_min, current_max, current_size, pqueue}}
   end
 
