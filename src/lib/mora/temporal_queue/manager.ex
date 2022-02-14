@@ -26,8 +26,10 @@ defmodule Mora.TemporalQueue.Manager do
     |> case do
       [] ->
         :pg.get_members(@pg_name)
-        |> Enum.filter(fn pid -> pid != self() end)
-        |> Enum.each(&GenServer.call(&1, {:spawn_and_notify, event}))
+        |> Enum.filter(fn p -> p != self() end)
+        |> Enum.each(fn pid -> GenServer.call(pid, {:spawn_and_notify, event}) end)
+
+        spawn_and_notify(event)
 
       queues ->
         Enum.each(queues, &GenServer.cast(&1, {:notify, event}))
@@ -36,7 +38,7 @@ defmodule Mora.TemporalQueue.Manager do
     {:noreply, state}
   end
 
-  def handle_call({:spawn_and_notify, event}, state) do
+  def handle_call({:spawn_and_notify, event}, _, state) do
     spawn_and_notify(event)
     {:noreply, state}
   end
