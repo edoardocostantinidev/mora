@@ -31,10 +31,10 @@ defmodule Mora.MixProject do
       {:libcluster, "~> 3.3.0"},
       {:memento, "~> 0.3.2"},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:plug, "~> 1.12.1"},
+      {:plug, "~> 1.13.2"},
       {:plug_cowboy, "~> 2.5.2"},
       {:plug_socket, "~> 0.1.0"},
-      {:poison, "~> 3.0"},
+      {:poison, "~> 5.0"},
       {:prioqueue, "~> 0.2.0"},
       {:priority_queue, "~> 1.0"}
     ]
