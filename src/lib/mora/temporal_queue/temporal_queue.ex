@@ -14,7 +14,7 @@ defmodule Mora.TemporalQueue do
   require Logger
   use GenServer
   @max_size 1000
-  @tick 999
+  @tick Application.get_env(:mora, :tick, 100)
   @pg_name "temporal_queues"
   @pg_system_name "system:temporal_queues"
   @behaviour Mora.CommonBehaviour.PgItem
