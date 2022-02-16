@@ -192,7 +192,6 @@ defmodule Mora.TemporalQueue do
   end
 
   defp schedule_tick(), do: Process.send_after(self(), :tick, @tick)
-
   def pg_name(category), do: @pg_name <> ":" <> category
   def pg_system_name(), do: @pg_system_name
 end
