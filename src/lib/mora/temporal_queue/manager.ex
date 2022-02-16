@@ -2,6 +2,7 @@ defmodule Mora.TemporalQueue.Manager do
   @moduledoc """
   This module provides a queue manager for the Mora.TemporalQueue module.
   """
+  @behaviour Mora.TemporalQueue.ManagerBehaviour
   use GenServer
   @pg_name "managers:temporal_queue"
   @pg_system_name "system:managers"
@@ -17,6 +18,22 @@ defmodule Mora.TemporalQueue.Manager do
 
   def notify(event) do
     GenServer.cast(__MODULE__, {:notify, event})
+  end
+
+  def unschedule(binary) do
+    GenServer.cast(__MODULE__, {:unschedule, binary})
+  end
+
+  def handle_cast({:unschedule, %{category: category, id: binary}}, state) do
+    category
+    |> Mora.TemporalQueue.pg_name()
+    |> :pg.get_members()
+    |> case do
+      queues ->
+        Enum.each(queues, &GenServer.cast(&1, {:unschedule, id: binary}))
+    end
+
+    {:noreply, state}
   end
 
   def handle_cast({:notify, event}, state) do
