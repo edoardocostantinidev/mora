@@ -1,4 +1,7 @@
 defmodule Mora.Api.Routers.Event do
+  @moduledoc """
+  This module contains the event router.
+  """
   use Plug.Router
 
   plug(:match)
@@ -9,21 +12,16 @@ defmodule Mora.Api.Routers.Event do
       conn
       |> read_body()
 
-    process_events(body)
+    body
+    |> parse_events()
+    |> get_events_service().process_events()
+
     send_resp(conn, 200, body)
   end
 
-  defp process_events(events) do
-    events = Poison.decode!(events, as: [%Mora.Model.Event{}])
-
-    events
-    |> Enum.map(fn event ->
-      event_hash = :erlang.phash2(event)
-      Map.put(event, :id, "#{event.createdAt}-#{event.fireAt}-#{event_hash}")
-    end)
-    |> Enum.each(fn event ->
-      Mora.Database.Mnesia.save(event)
-      Mora.TemporalQueue.Manager.notify(event)
-    end)
+  defp parse_events(json) do
+    events = Poison.decode!(json, as: [%Mora.Model.Event{}])
   end
+
+  defp get_events_service(), do: Application.get_env(:mora, :events_service, Mora.Service.Events)
 end

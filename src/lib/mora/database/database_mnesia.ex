@@ -1,5 +1,8 @@
 defmodule Mora.Database.Mnesia do
-  @behaviour Mora.Database
+  @moduledoc """
+  This module provides a database implementation with Mnesia.
+  """
+  @behaviour Mora.DatabaseBehaviour
   use GenServer
   require Logger
 
@@ -40,6 +43,43 @@ defmodule Mora.Database.Mnesia do
     Logger.debug("saved #{event.id} locally")
 
     :ok
+  end
+
+  def delete(event) do
+    GenServer.cast(__MODULE__, {:delete, event, true})
+  end
+
+  def handle_cast({:delete, event, false}, state) do
+    Logger.debug("deleting event #{event.id} from disk")
+
+    Memento.transaction!(fn ->
+      Memento.Query.delete(Mora.Model.Event, event.id)
+    end)
+
+    Logger.debug("deleted event #{event.id} from disk")
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:delete, event, true}, state) do
+    Logger.debug("deleting event #{event.id} from disk")
+
+    Memento.transaction!(fn ->
+      Memento.Query.delete(Mora.Model.Event, event.id)
+    end)
+
+    Logger.debug("deleted event #{event.id} from disk")
+
+    Logger.debug("sending delete event to other nodes")
+    self_pid = self()
+
+    :pg.get_members(Mora.Database.Mnesia)
+    |> Enum.filter(fn pid -> pid != self_pid end)
+    |> Enum.each(fn pid -> GenServer.cast(pid, {:delete, event, false}) end)
+
+    Logger.debug("sent delete event to other nodes")
+
+    {:noreply, state}
   end
 
   def handle_cast({:save, event, false}, state) do
