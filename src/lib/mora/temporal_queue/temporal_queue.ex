@@ -50,7 +50,7 @@ defmodule Mora.TemporalQueue do
   - `{:notify,event}` handles notification casts. Each event is notified to the queue so it can be enqueued or discarded.
 
   """
-  def handle_cast(:tick, state) do
+  def handle_info(:tick, state) do
     new_state = do_tick(state)
 
     {:noreply, new_state}
@@ -191,14 +191,7 @@ defmodule Mora.TemporalQueue do
     {min, max, new_size, new_pq}
   end
 
-  defp schedule_tick() do
-    self_pid = self()
-
-    Task.start(fn ->
-      :timer.sleep(@tick)
-      GenServer.cast(self_pid, :tick)
-    end)
-  end
+  defp schedule_tick(), do: Process.send_after(self(), :tick, @tick)
 
   def pg_name(category), do: @pg_name <> ":" <> category
   def pg_system_name(), do: @pg_system_name
