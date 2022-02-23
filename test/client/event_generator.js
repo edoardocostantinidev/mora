@@ -1,7 +1,18 @@
+import { randomInt } from 'crypto';
 import http from 'http'
 async function main() {
+    let jobs = process.argv[2] || 1;
+    let sleep_ms = process.argv[3] || 100;
+    let fns = [];
+    for (let j = 0; j < jobs; j++) {
+        fns.push(generate(sleep_ms));
+    }
+    Promise.all(fns)
+        .then(results => console.log(results));
 
-
+}
+async function generate(sleep_ms) {
+    await sleep(randomInt(120));
     for (let index = 0; index < 10000000; index++) {
 
         var date = new Date();
@@ -11,7 +22,7 @@ async function main() {
         var options = {
             'method': 'POST',
             'hostname': 'localhost',
-            'port': 8000,
+            'port': 4000,
             'path': '/events',
             'headers': {
                 'Content-Type': 'application/json'
@@ -46,11 +57,11 @@ async function main() {
         }
     }
 ]`;
-console.log(index);
+        console.log(index);
         req.write(postData);
 
         req.end();
-	    await sleep(100);
+        await sleep(sleep_ms);
     }
 }
 function sleep(ms) {
