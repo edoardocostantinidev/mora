@@ -14,15 +14,7 @@ defmodule Mora.Test.Api.Routers.Events do
     test "post should process events through events service" do
       expect(Mora.Service.EventsMock, :process_events, fn _ -> :ok end)
 
-      event = Generator.get_random_event()
-
-      body =
-        event
-        |> Map.from_struct()
-        |> Map.delete(:__meta__)
-        |> Map.delete(:id)
-        |> List.wrap()
-        |> Poison.encode!()
+      body = Generator.get_random_event_raw()
 
       :post
       |> conn("/events", body)

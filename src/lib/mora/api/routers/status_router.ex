@@ -14,7 +14,7 @@ defmodule Mora.Api.Routers.Status do
 
   get "/queues" do
     resp_body =
-      :pg.get_members(TemporalQueue.pg_system_name())
+      :pg.get_members(TemporalQueue.Server.pg_system_name())
       |> Enum.map(fn pid ->
         GenServer.call(pid, :info)
       end)

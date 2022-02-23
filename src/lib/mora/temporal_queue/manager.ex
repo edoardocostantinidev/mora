@@ -17,28 +17,28 @@ defmodule Mora.TemporalQueue.Manager do
   end
 
   def notify(event) do
-    GenServer.cast(__MODULE__, {:notify, event})
+    GenServer.call(__MODULE__, {:notify, event})
   end
 
-  def unschedule(binary) do
-    GenServer.cast(__MODULE__, {:unschedule, binary})
+  def unschedule(event) do
+    GenServer.call(__MODULE__, {:unschedule, event})
   end
 
-  def handle_cast({:unschedule, %{category: category, id: binary}}, state) do
+  def handle_call({:unschedule, %{category: category, id: binary}}, _, state) do
     category
-    |> Mora.TemporalQueue.pg_name()
+    |> Mora.TemporalQueue.Server.pg_name()
     |> :pg.get_members()
     |> case do
       queues ->
-        Enum.each(queues, &GenServer.cast(&1, {:unschedule, id: binary}))
+        Enum.each(queues, &GenServer.call(&1, {:unschedule, id: binary}))
     end
 
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  def handle_cast({:notify, event}, state) do
+  def handle_call({:notify, event}, _, state) do
     event.category
-    |> Mora.TemporalQueue.pg_name()
+    |> Mora.TemporalQueue.Server.pg_name()
     |> :pg.get_members()
     |> case do
       [] ->
@@ -49,20 +49,20 @@ defmodule Mora.TemporalQueue.Manager do
         spawn_and_notify(event)
 
       queues ->
-        Enum.each(queues, &GenServer.cast(&1, {:notify, event}))
+        Enum.each(queues, &GenServer.call(&1, {:notify, event}))
     end
 
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
   def handle_call({:spawn_and_notify, event}, _, state) do
     spawn_and_notify(event)
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
   defp spawn_and_notify(event) do
     {:ok, queue} = Mora.TemporalQueue.DynamicSupervisor.start_temporal_queue(event.category)
-    GenServer.cast(queue, {:notify, event})
+    GenServer.call(queue, {:notify, event})
   end
 
   def pg_name(_), do: @pg_name

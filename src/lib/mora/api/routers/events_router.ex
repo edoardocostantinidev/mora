@@ -20,7 +20,7 @@ defmodule Mora.Api.Routers.Event do
   end
 
   defp parse_events(json) do
-    events = Poison.decode!(json, as: [%Mora.Model.Event{}])
+    Poison.decode!(json, as: [%Mora.Model.Event{}])
   end
 
   defp get_events_service(), do: Application.get_env(:mora, :events_service, Mora.Service.Events)
