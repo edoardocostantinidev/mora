@@ -39,17 +39,17 @@ defmodule Mora.Database.Mnesia do
 
   def save(event) do
     Logger.debug("saving #{event.id} locally")
-    GenServer.cast(__MODULE__, {:save, event, true})
+    GenServer.call(__MODULE__, {:save, event, true})
     Logger.debug("saved #{event.id} locally")
 
     :ok
   end
 
   def delete(event) do
-    GenServer.cast(__MODULE__, {:delete, event, true})
+    GenServer.call(__MODULE__, {:delete, event, true})
   end
 
-  def handle_cast({:delete, event, false}, state) do
+  def handle_call({:delete, event, false}, _, state) do
     Logger.debug("deleting event #{event.id} from disk")
 
     Memento.transaction!(fn ->
@@ -58,10 +58,10 @@ defmodule Mora.Database.Mnesia do
 
     Logger.debug("deleted event #{event.id} from disk")
 
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  def handle_cast({:delete, event, true}, state) do
+  def handle_call({:delete, event, true}, _, state) do
     Logger.debug("deleting event #{event.id} from disk")
 
     Memento.transaction!(fn ->
@@ -75,14 +75,14 @@ defmodule Mora.Database.Mnesia do
 
     :pg.get_members(Mora.Database.Mnesia)
     |> Enum.filter(fn pid -> pid != self_pid end)
-    |> Enum.each(fn pid -> GenServer.cast(pid, {:delete, event, false}) end)
+    |> Enum.each(fn pid -> GenServer.call(pid, {:delete, event, false}) end)
 
     Logger.debug("sent delete event to other nodes")
 
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  def handle_cast({:save, event, false}, state) do
+  def handle_call({:save, event, false}, _, state) do
     Logger.debug("writing event #{event.id} to disk")
 
     Memento.transaction!(fn ->
@@ -91,10 +91,10 @@ defmodule Mora.Database.Mnesia do
 
     Logger.debug("wrote event #{event.id} to disk")
 
-    {:noreply, state}
+    {:reply, :ok, state}
   end
 
-  def handle_cast({:save, event, true}, state) do
+  def handle_call({:save, event, true}, _, state) do
     Logger.debug("writing event #{event.id} to disk")
 
     Memento.transaction!(fn ->
@@ -108,31 +108,11 @@ defmodule Mora.Database.Mnesia do
 
     :pg.get_members(Mora.Database.Mnesia)
     |> Enum.filter(fn pid -> pid != self_pid end)
-    |> Enum.each(fn pid -> GenServer.cast(pid, {:save, event, false}) end)
+    |> Enum.each(fn pid -> GenServer.call(pid, {:save, event, false}) end)
 
     Logger.debug("sent save event to other nodes")
 
-    {:noreply, state}
-  end
-
-  def handle_cast(cast, state) do
-    Logger.warn("Received a weird cast on #{__MODULE__}: #{inspect(cast)} #{inspect(state)}")
-
-    {:noreply, state}
-  end
-
-  def get_all() do
-    Logger.info("getting all events")
-    data = GenServer.call(__MODULE__, {:get})
-    {:ok, data}
-  end
-
-  def get_from(opts \\ []) do
-    timestamp = Keyword.get(opts, :timestamp, -1)
-    limit = Keyword.get(opts, :limit, -1)
-    Logger.info("getting #{limit} events from #{timestamp} onwards")
-    data = GenServer.call(__MODULE__, {:get, timestamp, limit})
-    {:ok, data}
+    {:reply, :ok, state}
   end
 
   def handle_call({:get}, _from, state) do
@@ -163,5 +143,19 @@ defmodule Mora.Database.Mnesia do
     Logger.warn("Received a weird call on #{__MODULE__}: #{call} #{state}")
 
     {:noreply, state}
+  end
+
+  def get_all() do
+    Logger.info("getting all events")
+    data = GenServer.call(__MODULE__, {:get})
+    {:ok, data}
+  end
+
+  def get_from(opts \\ []) do
+    timestamp = Keyword.get(opts, :timestamp, -1)
+    limit = Keyword.get(opts, :limit, -1)
+    Logger.info("getting #{limit} events from #{timestamp} onwards")
+    data = GenServer.call(__MODULE__, {:get, timestamp, limit})
+    {:ok, data}
   end
 end

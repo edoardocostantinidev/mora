@@ -16,28 +16,45 @@ defmodule Mora.Service.Events do
            :ok <- notify(event) do
         :ok
       else
-        {:error, e} ->
-          Logger.error("Error while processing event: #{inspect(e)}")
+        {:error, :notify, _} ->
           delete_from_database(event)
-          unschedule(event)
+
+        _ ->
+          nil
       end
     end)
   end
 
   defp delete_from_database(event) do
     get_database().delete(event.id)
+    |> case do
+      {:error, e} -> {:error, :delete, e}
+      :ok -> :ok
+    end
   end
 
   defp save_to_database(event) do
     get_database().save(event)
+    |> case do
+      {:error, e} -> {:error, :save, e}
+      :ok -> :ok
+    end
   end
 
   defp unschedule(event) do
     get_queue_manager().unschedule(event)
+    |> case do
+      {:error, e} -> {:error, :unschedule, e}
+      :ok -> :ok
+    end
   end
 
   defp notify(event) do
     get_queue_manager().notify(event)
+    |> case do
+      {:error, e} -> {:error, :notify, e}
+      :ok -> :ok
+    end
   end
 
   defp get_database(), do: Application.get_env(:mora, :database, Mora.Database.Mnesia)

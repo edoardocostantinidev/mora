@@ -6,6 +6,15 @@ defmodule Mora.Support.Generator do
     get_random_event(1_682_235_256_700, 1_692_255_256_733)
   end
 
+  def get_random_event_raw() do
+    get_random_event()
+    |> Map.from_struct()
+    |> Map.delete(:__meta__)
+    |> Map.delete(:id)
+    |> List.wrap()
+    |> Poison.encode!()
+  end
+
   def get_random_event(fire_at_min, fire_at_max, category \\ random_string(8)) do
     event =
       struct(Mora.Model.Event,

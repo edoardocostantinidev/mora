@@ -15,7 +15,7 @@ Benchee.run(
     end)
     |> Enum.each(fn event ->
       Mora.Events.Database.Mnesia.save(event)
-      GenServer.cast(Mora.Events.TemporalQueue.Priority, {:notify, event})
+      GenServer.call(Mora.Events.TemporalQueue.Priority, {:notify, event})
     end)
     end,
      "insert_one_hundred_thousand_events" => fn ->
@@ -26,7 +26,7 @@ Benchee.run(
     end)
     |> Enum.each(fn event ->
       Mora.Events.Database.Mnesia.save(event)
-      GenServer.cast(Mora.Events.TemporalQueue.Priority, {:notify, event})
+      GenServer.call(Mora.Events.TemporalQueue.Priority, {:notify, event})
     end)
     end,
   },

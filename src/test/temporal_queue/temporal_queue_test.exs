@@ -5,73 +5,43 @@ defmodule Mora.Test.TemporalQueue do
 
   use ExUnit.Case, async: true
   doctest Mora
-  alias Mora.TemporalQueue, as: Priority
+  alias Mora.TemporalQueue
   alias Mora.Support.Generator
-
-  setup _ do
-    Memento.Table.clear(Mora.Model.Event)
-    {:ok, _} = start_supervised({Priority, %{category: "test"}})
-    :ok
-  end
-
-  test "pqueue should insert new item when notified of an event and the pqueue has space available" do
-    event = Generator.get_random_event()
-    GenServer.cast(Priority, {:notify, event})
-
-    %{queue_size: queue_size, queue_temporal_min: min, queue_temporal_max: max} =
-      GenServer.call(Priority, :info)
-
-    assert queue_size == 1
-    assert min == event.fireAt
-    assert max == event.fireAt
-  end
-
-  test "pqueue should return correct info when called with :info" do
-    event = Generator.get_random_event()
-    GenServer.cast(Priority, {:notify, event})
-
-    %{
-      queue_size: queue_size,
-      queue_temporal_min: min,
-      queue_temporal_max: max
-    } = GenServer.call(Priority, :info)
-
-    assert queue_size == 1
-    assert min == event.fireAt
-    assert max == event.fireAt
-  end
+  require Logger
 
   test "pqueue should not insert new item when notified of an event and the pqueue doesn't have space and the event is not in range" do
-    max_size = Priority.max_size()
+    event_not_in_range = Generator.get_random_event(1000, 2000)
+    events_in_queue = 1..5 |> Enum.map(fn _ -> Generator.get_random_event(500, 1000) end)
 
-    1..max_size
-    |> Enum.each(fn _ ->
-      event = Generator.get_random_event(9_000_000_000, 9_900_000_000)
-      GenServer.cast(Priority, {:notify, event})
-    end)
+    state = %{
+      current_min: 500,
+      current_max: 1000,
+      current_size: 5,
+      max_size: 5,
+      queue: events_in_queue
+    }
 
-    event_outside_range = Generator.get_random_event(9_990_000_000, 9_999_000_000)
-    GenServer.cast(Priority, {:notify, event_outside_range})
-
-    %{queue_size: queue_size} = GenServer.call(Priority, :info)
-
-    assert queue_size == max_size
+    new_state = TemporalQueue.enqueue(event_not_in_range, state)
+    assert new_state == state
   end
 
   test "pqueue should insert new item when notified of an event and the pqueue doesn't have space and the event is in range" do
-    max_size = Priority.max_size()
+    event_in_range = Generator.get_random_event(500, 502)
+    events_in_queue = 1..5 |> Enum.map(fn _ -> Generator.get_random_event(500, 1000) end)
 
-    1..max_size
-    |> Enum.each(fn _ ->
-      event = Generator.get_random_event(9_000_000_000, 9_900_000_000)
-      GenServer.cast(Priority, {:notify, event})
-    end)
+    state = %{
+      current_min: 500,
+      current_max: 1000,
+      current_size: 5,
+      max_size: 5,
+      queue: events_in_queue
+    }
 
-    event_inside_range = Generator.get_random_event(8_000_000_000, 8_900_000_000)
-    GenServer.cast(Priority, {:notify, event_inside_range})
+    new_state = TemporalQueue.enqueue(event_in_range, state)
+    in_queue = event_in_range in new_state.queue
 
-    %{queue_size: queue_size} = GenServer.call(Priority, :info)
-
-    assert queue_size == max_size
+    assert Enum.count(state.queue) == Enum.count(new_state.queue)
+    assert state.current_size == new_state.current_size
+    assert in_queue == true
   end
 end
