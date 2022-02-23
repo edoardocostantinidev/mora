@@ -3,21 +3,22 @@ import http from 'http'
 async function main() {
     let jobs = process.argv[2] || 1;
     let sleep_ms = process.argv[3] || 100;
+    let duration = process.argv[4] || 1;
     let fns = [];
     for (let j = 0; j < jobs; j++) {
-        fns.push(generate(sleep_ms));
+        fns.push(generate(sleep_ms, duration));
     }
     Promise.all(fns)
         .then(results => console.log(results));
 
 }
-async function generate(sleep_ms) {
+async function generate(sleep_ms, duration) {
     await sleep(randomInt(120));
     for (let index = 0; index < 10000000; index++) {
 
         var date = new Date();
         var time_milliseconds = date.getTime();
-        var time_milliseconds_postponed = time_milliseconds + (1000 * 1);
+        var time_milliseconds_postponed = time_milliseconds + (1000 * duration);
 
         var options = {
             'method': 'POST',

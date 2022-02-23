@@ -144,7 +144,7 @@ defmodule Mora.TemporalQueue.Server do
 
     if Enum.count(consumed_pq) > 0 && state.current_size == @max_size do
       GenServer.call(Mora.Database.Mnesia, {:get, current_max + 1, max_events_to_retrieve})
-      |> Enum.each(fn event -> GenServer.call(self(), {:notify, event}) end)
+      |> Enum.each(fn event -> get_queue_manager().notify(event) end)
     end
 
     state
@@ -153,6 +153,10 @@ defmodule Mora.TemporalQueue.Server do
   end
 
   defp schedule_tick(), do: Process.send_after(self(), :tick, @tick)
+
+  defp get_queue_manager(),
+    do: Application.get_env(:mora, :temporal_queue_manager, Mora.TemporalQueue.Manager)
+
   def pg_name(category), do: @pg_name <> ":" <> category
   def pg_system_name(), do: @pg_system_name
 end
