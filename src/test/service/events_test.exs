@@ -6,6 +6,7 @@ defmodule Mora.Test.Service.Events do
   alias Mora.Service.Events
   alias Mora.Support.Generator
   import Mox
+  import ExUnit.CaptureLog
   setup :verify_on_exit!
 
   describe "Events Service" do
