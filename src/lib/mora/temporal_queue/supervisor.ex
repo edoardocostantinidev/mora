@@ -19,7 +19,7 @@ defmodule Mora.TemporalQueue.DynamicSupervisor do
   end
 
   def start_temporal_queue(category) do
-    spec = {Mora.TemporalQueue, %{category: category}}
+    spec = {Mora.TemporalQueue.Server, %{category: category}}
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
 end
