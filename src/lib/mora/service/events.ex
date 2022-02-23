@@ -41,14 +41,6 @@ defmodule Mora.Service.Events do
     end
   end
 
-  defp unschedule(event) do
-    get_queue_manager().unschedule(event)
-    |> case do
-      {:error, e} -> {:error, :unschedule, e}
-      :ok -> :ok
-    end
-  end
-
   defp notify(event) do
     get_queue_manager().notify(event)
     |> case do
