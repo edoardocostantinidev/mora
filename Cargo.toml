@@ -1,0 +1,77 @@
+[package]
+name = "mora"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Edoardo Costantini <edoardo.costantini.96@gmail.com>"
+]
+description = "A distributed event scheduler"
+readme = "./README.md"
+license-file = "./LICENSE"
+keywords = ["scheduler", "distributed"]
+
+[features]
+default=[]
+
+[dependencies]
+mora-queue = {path = "./mora-queue"}
+
+[dev-dependencies]
+criterion = "0.3.6"
+
+[[bench]]
+name = "priority_queue"
+harness = false
+
+[workspace]
+members = [
+    "mora-core",
+    "mora-queue",
+    "mora-api",
+    "mora-server",
+    "mora-client",
+    "mora-cli",
+]
+
+
+[profile.dev]
+opt-level = 0
+debug = 0
+codegen-units = 4
+lto = false
+incremental = true
+panic = 'unwind'
+debug-assertions = true
+overflow-checks = false
+rpath = false
+
+[profile.release]
+opt-level = 3
+debug = false
+codegen-units = 1
+lto = "thin"
+incremental = false
+panic = 'unwind'
+debug-assertions = false
+overflow-checks = false
+rpath = false
+
+[profile.test]
+opt-level = 0
+debug = 0
+codegen-units = 16
+lto = false
+incremental = true
+debug-assertions = true
+overflow-checks = true
+rpath = false
+
+[profile.bench]
+opt-level = 3
+debug = false
+codegen-units = 1
+lto = 'thin'
+incremental = false
+debug-assertions = false
+overflow-checks = false
+rpath = false
