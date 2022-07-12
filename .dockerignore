@@ -1,8 +1,0 @@
-docs/
-test-client/
-.elixir_ls/
-src/_build/
-src/.elixir_ls/
-src/deps/
-src/.mnesia/
-*.beam
