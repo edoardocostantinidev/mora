@@ -1,0 +1,49 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.fmt]
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+command = "cargo"
+args = ["build"]
+dependencies = ["clean"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["clean"]
+
+[tasks.wtest]
+command = "cargo"
+args =  ["test"]
+watch = true
+
+[tasks.wclippy]
+command = "cargo"
+args =  ["clippy"]
+watch = true
+
+[tasks.wcheck]
+command = "cargo"
+args =  ["check"]
+watch = true
+
+[tasks.wbuild]
+command = "cargo"
+args =  ["build"]
+watch = true
+
+[tasks.wrun]
+command = "cargo"
+args =  ["run"]
+watch = true
