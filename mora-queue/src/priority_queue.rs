@@ -3,10 +3,20 @@ use std::hash::Hash;
 
 pub struct PriorityQueue<T, S>
 where
-    T: Clone + Eq + Hash,
+    T: Clone + Eq + Hash + Ord,
     S: Clone,
 {
     map: HashMap<T, S>,
+}
+
+impl<T, S> Default for PriorityQueue<T, S>
+where
+    T: Clone + Eq + Hash + Ord,
+    S: Clone,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T, S> PriorityQueue<T, S>
