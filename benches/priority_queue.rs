@@ -1,15 +1,19 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mora_queue::priority_queue::PriorityQueue;
+use mora_queue::{dumb_priority_queue::DumbPriorityQueue, priority_queue::PriorityQueue};
 
-fn enqueue(c: &mut Criterion) {
-    let mut pq = PriorityQueue::<i32, i32>::new();
-    c.bench_function("enqueue", |b| {
-        b.iter(|| pq.enqueue(black_box(1), black_box(2)))
+fn dumb_enqueue(c: &mut Criterion) {
+    let mut pq = DumbPriorityQueue::<i32, i32>::default();
+    let mut count = 0;
+    c.bench_function("dumb_enqueue", |b| {
+        b.iter(|| {
+            count = count + 1;
+            pq.enqueue(black_box(count), black_box(-count))
+        })
     });
 }
 
-fn take(c: &mut Criterion) {
-    let mut pq = PriorityQueue::<i32, i32>::new();
+fn dumb_dequeue(c: &mut Criterion) {
+    let mut pq = DumbPriorityQueue::<i32, i32>::default();
 
     (0..10000).for_each(|x| match x % 2 {
         1 => {
@@ -21,8 +25,8 @@ fn take(c: &mut Criterion) {
         _ => {}
     });
 
-    c.bench_function("take", |b| b.iter(|| pq.take(black_box(100))));
+    c.bench_function("dumb_dequeue", |b| b.iter(|| pq.dequeue(black_box(100))));
 }
 
-criterion_group!(queue_benches, enqueue, take);
+criterion_group!(queue_benches, dumb_enqueue, dumb_dequeue);
 criterion_main!(queue_benches);
