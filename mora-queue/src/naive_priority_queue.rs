@@ -1,4 +1,4 @@
-use std::cmp::min;
+use std::{cmp::min, collections::VecDeque};
 
 use crate::priority_queue::PriorityQueue;
 
@@ -8,7 +8,7 @@ struct Node<K, V> {
     value: V,
 }
 pub struct NaivePriorityQueue<K, V> {
-    items: Vec<Node<K, V>>,
+    items: VecDeque<Node<K, V>>,
 }
 
 impl<K, V> Default for NaivePriorityQueue<K, V>
@@ -82,7 +82,7 @@ impl<K: Clone + Ord, V: Clone> PriorityQueue<K, V> for NaivePriorityQueue<K, V> 
         let range = 0..min(count, self.items.len());
 
         for _ in range {
-            let v: V = self.items.remove(0).value;
+            let v: V = self.items.pop_front().unwrap().value;
             items.push(v);
         }
 
