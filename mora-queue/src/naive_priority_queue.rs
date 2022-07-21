@@ -53,28 +53,19 @@ impl<K: Clone + Ord, V: Clone> PriorityQueue<K, V> for NaivePriorityQueue<K, V> 
             }
         }
 
-        match index {
-            None => {
-                self.items.insert(
-                    self.items.len(),
-                    Node {
-                        key,
-                        value: value.clone(),
-                    },
-                );
-                Some(value)
-            }
-            Some(i) => {
-                self.items.insert(
-                    i,
-                    Node {
-                        key,
-                        value: value.clone(),
-                    },
-                );
-                Some(value)
-            }
-        }
+        let index = match index {
+            None => self.items.len(),
+            Some(i) => i,
+        };
+
+        self.items.insert(
+            index,
+            Node {
+                key,
+                value: value.clone(),
+            },
+        );
+        Some(value)
     }
 
     fn dequeue(&mut self, count: usize) -> Vec<V> {
