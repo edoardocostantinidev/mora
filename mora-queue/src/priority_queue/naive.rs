@@ -79,4 +79,8 @@ impl<K: Clone + Ord, V: Clone> PriorityQueue<K, V> for NaivePriorityQueue<K, V> 
 
         items
     }
+
+    fn peek(&self) -> Option<(K, V)> {
+        self.items.get(0).map(|n| (n.key.clone(), n.value.clone()))
+    }
 }

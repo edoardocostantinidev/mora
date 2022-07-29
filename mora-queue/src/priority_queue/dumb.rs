@@ -50,4 +50,19 @@ where
             .map(|k| self.map.remove(k).unwrap())
             .collect::<Vec<V>>()
     }
+
+    fn peek(&self) -> Option<(K, V)> {
+        let mut keys: Vec<K> = self.map.keys().cloned().collect::<Vec<K>>();
+        keys.sort();
+        let first_key: Option<K> = keys
+            .iter()
+            .take(1)
+            .cloned()
+            .collect::<Vec<K>>()
+            .first()
+            .cloned();
+        first_key
+            .map(|k| self.map.get_key_value(&k).unwrap())
+            .map(|kv| (kv.0.clone(), kv.1.clone()))
+    }
 }
