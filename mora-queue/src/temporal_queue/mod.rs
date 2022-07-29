@@ -1,5 +1,6 @@
 use crate::priority_queue::{naive::NaivePriorityQueue, PriorityQueue};
 
+#[derive(Debug)]
 pub struct TemporalQueue<V> {
     inner: NaivePriorityQueue<u128, V>,
     capacity: u128,
@@ -35,17 +36,23 @@ impl<V> TemporalQueue<V>
 where
     V: Clone,
 {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     /// Enqueues a value
-    fn enqueue(&mut self, timestamp: u128, value: V) {
-        self.inner.enqueue(timestamp, value);
-        self.len += 1;
+    pub fn enqueue(&mut self, timestamp: u128, value: V) -> Result<(), &str> {
+        match self.capacity {
+            n if self.len == n => Err("queue full"),
+            _ => {
+                self.inner.enqueue(timestamp, value);
+                self.len += 1;
+                Ok(())
+            }
+        }
     }
 
-    fn dequeue_until(&mut self, timestamp: u128) -> Vec<V> {
+    pub fn dequeue_until(&mut self, timestamp: u128) -> Vec<V> {
         //todo: improve here using ranges
         let mut values: Vec<V> = vec![];
         loop {
@@ -73,24 +80,26 @@ mod tests {
     }
 
     #[test]
-    fn temporal_queue_should_enqueue_items_correctly() {
+    fn temporal_queue_should_enqueue_items_correctly() -> Result<(), String> {
         let mut tq = TemporalQueue::<i32>::default();
-        tq.enqueue(3, 3);
-        tq.enqueue(4, 4);
-        tq.enqueue(2, 2);
-        tq.enqueue(1, 1);
+        tq.enqueue(3, 3)?;
+        tq.enqueue(4, 4)?;
+        tq.enqueue(2, 2)?;
+        tq.enqueue(1, 1)?;
         assert_eq!(tq.inner.dequeue(4), vec![1, 2, 3, 4]);
+        Ok(())
     }
 
     #[test]
-    fn temporal_queue_dequeue_until_dequeues_until_given_timestamp() {
+    fn temporal_queue_dequeue_until_dequeues_until_given_timestamp() -> Result<(), String> {
         let mut tq = TemporalQueue::<i32>::default();
-        tq.enqueue(1, 1);
-        tq.enqueue(2, 2);
-        tq.enqueue(3, 3);
-        tq.enqueue(4, 4);
+        tq.enqueue(1, 1)?;
+        tq.enqueue(2, 2)?;
+        tq.enqueue(3, 3)?;
+        tq.enqueue(4, 4)?;
         let result = tq.dequeue_until(2);
         assert_eq!(result, vec![1, 2]);
         assert_eq!(tq.len, 2);
+        Ok(())
     }
 }
