@@ -1,7 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mora_queue::{
-    dumb_priority_queue::DumbPriorityQueue, naive_priority_queue::NaivePriorityQueue,
-    priority_queue::PriorityQueue,
+use mora_queue::priority_queue::{
+    dumb::DumbPriorityQueue, naive::NaivePriorityQueue, PriorityQueue,
 };
 
 fn dumb_enqueue(c: &mut Criterion) {
