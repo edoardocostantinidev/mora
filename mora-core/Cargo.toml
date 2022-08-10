@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 mora-queue = {path = "../mora-queue"}
+thiserror = "1.0.32"

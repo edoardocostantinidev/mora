@@ -6,3 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+config = "0.13.2"
+serde = "1.0.143"
+serde_derive = "1.0.143"
+mora-core = {path = "../mora-core"}
+mora-api = {path = "../mora-api"}
