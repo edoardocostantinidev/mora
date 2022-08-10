@@ -19,6 +19,8 @@ impl Server {
 
     pub fn run(self) -> MoraResult<()> {
         dbg!(self.config);
-        MoraApi::start_listening().map_err(|e| MoraError::ApiError(e.to_string()))
+        MoraApi::start_listening()
+            .map(|_| ())
+            .map_err(|e| MoraError::ApiError(e.to_string()))
     }
 }
