@@ -53,7 +53,7 @@ where
     }
 
     pub fn dequeue_until(&mut self, timestamp: u128) -> Vec<V> {
-        //todo: improve here using ranges
+        //todo: improve here using apposite data structure
         let mut values: Vec<V> = vec![];
         loop {
             match self.inner.peek() {
