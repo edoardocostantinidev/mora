@@ -14,7 +14,9 @@ keywords = ["scheduler", "distributed"]
 default=[]
 
 [dependencies]
+mora-core = {path = "./mora-core"}
 mora-queue = {path = "./mora-queue"}
+mora-server = {path = "./mora-server"}
 
 [dev-dependencies]
 criterion = "0.3.6"
