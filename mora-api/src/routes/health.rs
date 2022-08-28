@@ -1,14 +1,11 @@
+use crate::services::health::HealthCheckResult;
+#[cfg_attr(test, mockall_double::double)]
+use crate::services::health::HealthService;
 use rocket::{
     get,
     serde::{json::Json, Serialize},
     Route, State,
 };
-
-use crate::services::health::HealthCheckResult;
-#[cfg_attr(test, mockall_double::double)]
-use crate::services::health::HealthService;
-
-use super::MutableMoraContext;
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "rocket::serde")]
@@ -46,10 +43,8 @@ pub fn state() -> HealthService {
 #[cfg(test)]
 mod tests {
 
-    use crate::services::health::MockHealthService;
-
     use super::*;
-
+    use crate::services::health::MockHealthService;
     use rocket::{http::Status, local::blocking::Client};
 
     #[test]
