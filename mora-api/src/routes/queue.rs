@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use mora_core::context::MoraContext;
 use rocket::{
@@ -7,7 +7,7 @@ use rocket::{
     Route, State,
 };
 
-type MutableMoraContext = Arc<Mutex<MoraContext>>;
+use crate::routes::MutableMoraContext;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -23,7 +23,7 @@ struct GetQueueResponse {
 }
 
 #[post("/", data = "<add_queue_request>")]
-fn add_queue(
+fn create_queue(
     add_queue_request: Json<AddQueueRequest<'_>>,
     state: &State<MutableMoraContext>,
 ) -> String {
@@ -35,7 +35,7 @@ fn add_queue(
 }
 
 #[get("/<queue_name>", format = "json")]
-fn get_queue(
+fn queue(
     queue_name: String,
     state: &State<MutableMoraContext>,
 ) -> Result<Json<GetQueueResponse>, NotFound<String>> {
@@ -49,32 +49,42 @@ fn get_queue(
     }))
 }
 
+#[get("/", format = "json")]
+fn queues(state: &State<MutableMoraContext>) -> String {
+    "".to_string()
+}
+
+#[delete("/<queue_name>", format = "json")]
+fn delete_queue(queue_name: String, state: &State<MutableMoraContext>) -> String {
+    "".to_string()
+}
+
 pub fn all() -> Vec<Route> {
-    routes![add_queue, get_queue]
+    routes![create_queue, queue, queues, delete_queue]
 }
 
 pub fn state() -> MutableMoraContext {
     MutableMoraContext::new(Mutex::new(MoraContext::default()))
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::MoraApi;
-    use rocket::{http::Status, local::blocking::Client};
+// #[cfg(test)]
+// mod tests {
+//     use crate::MoraApi;
+//     use rocket::{http::Status, local::blocking::Client};
 
-    #[test]
-    fn add_queue_adds_a_queue() {
-        let client = Client::tracked(MoraApi::test_rocket()).expect("client error");
-        let response = client
-            .post("/queues")
-            .body("{\"queue_name\":\"test\"}")
-            .dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        let response = client.get("/queues/test").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(
-            response.into_string(),
-            Some("{\"queue_name\":\"test\"}".to_string())
-        );
-    }
-}
+//     #[test]
+//     fn add_queue_adds_a_queue() {
+//         let client = Client::tracked(MoraApi::test_rocket()).expect("client error");
+//         let response = client
+//             .post("/queues")
+//             .body("{\"queue_name\":\"test\"}")
+//             .dispatch();
+//         assert_eq!(response.status(), Status::Ok);
+//         let response = client.get("/queues/test").dispatch();
+//         assert_eq!(response.status(), Status::Ok);
+//         assert_eq!(
+//             response.into_string(),
+//             Some("{\"queue_name\":\"test\"}".to_string())
+//         );
+//     }
+// }
