@@ -32,7 +32,7 @@ defmodule Mora.MixProject do
       {:memento, "~> 0.3.2"},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0.1", only: :test},
-      {:plug, "~> 1.13.2"},
+      {:plug, "~> 1.14.1"},
       {:plug_cowboy, "~> 2.5.2"},
       {:plug_socket, "~> 0.1.0"},
       {:poison, "~> 5.0"},
