@@ -11,3 +11,6 @@ serde = "1.0.143"
 serde_derive = "1.0.143"
 mora-core = { workspace = true }
 mora-api = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+simple_logger = { workspace = true }

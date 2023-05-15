@@ -26,15 +26,13 @@ args = ["test"]
 command = "cargo"
 args = ["run", "--bin", "mora-server"]
 
-[tasks.load-test]
-run_task = [ 
-    {name = "run-server", fork = true},
-    {name = "load-test-api-health"}
-]
+[tasks.api-tests]
+workspace = false
+dependencies = [ "api-test-health" ]
 
-[tasks.load-test-api-health]
+[tasks.api-test-health]
 command = "k6"
-args = ["run", "load-tests/api-health-test.js"]
+args = ["run", "tests/api/health.js"]
 
 [tasks.wtest]
 command = "cargo"

@@ -3,7 +3,7 @@ use mora_core::result::{MoraError, MoraResult};
 
 #[derive(Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct MoraConfig {
-    port: u16,
+    pub port: u16,
 }
 
 impl Default for MoraConfig {

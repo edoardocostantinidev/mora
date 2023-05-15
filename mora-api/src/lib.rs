@@ -1,26 +1,28 @@
-pub mod model;
-pub mod routes;
-pub mod services;
+use axum::{routing::get, Router};
+use log::info;
+use mora_core::result::{MoraError, MoraResult};
+use std::net::SocketAddr;
 
-use rocket::{Config, Ignite, Rocket};
-use routes::{channels, events, health, queues};
+pub(crate) mod routes;
+pub struct MoraApi {
+    port: u16,
+}
 
-#[macro_use]
-extern crate rocket;
-
-#[derive(Debug, Default)]
-pub struct MoraApi;
 impl MoraApi {
-    #[rocket::main]
-    pub async fn start_listening() -> Result<Rocket<Ignite>, rocket::Error> {
-        rocket::custom()
-            .manage(queues::state())
-            .manage(health::state())
-            .mount("/health", health::all())
-            .mount("/queues", queues::all())
-            .mount("/events", events::all())
-            .mount("/channels", channels::all())
-            .launch()
+    pub fn new(port: u16) -> Self {
+        MoraApi { port }
+    }
+    pub async fn start_listening(&self) -> MoraResult<()> {
+        let app = Router::new().route("/health", get(routes::health::get));
+        let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
+            .parse()
+            .map_err(|e| MoraError::ApiError(format!("error parsing address: {e}")))?;
+        info!("Starting API Server");
+        axum::Server::bind(addr)
+            .serve(app.into_make_service())
             .await
+            .map_err(|e| MoraError::ApiError(format!("error starting api server: {e}")))?;
+
+        Ok(())
     }
 }

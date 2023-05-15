@@ -3,8 +3,8 @@
 Mora handles client requests via an HTTP API that exposes the various routes.
 Here's a comprehensive list:
 
-- [ ] `/health`
-  - [ ] `GET /`: returns `200 OK` if service is up and running correctly.
+- [x] `/health`
+  - [x] `GET /`: returns `200 OK` if service is up and running correctly.
 - [ ] `/queues`
   - [ ] `GET /`: gets all queues available
   - [ ] `GET /{queue_name}`: gets basic informations about a specific queue.
