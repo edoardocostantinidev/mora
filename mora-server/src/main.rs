@@ -1,6 +1,7 @@
 use crate::config::MoraConfig;
 use mora_api::MoraApi;
 use mora_core::result::{MoraError, MoraResult};
+use simple_logger::SimpleLogger;
 
 pub mod config;
 
@@ -16,16 +17,18 @@ impl Server {
         })
     }
 
-    pub fn run(self) -> MoraResult<()> {
-        dbg!(self.config);
-        MoraApi::start_listening()
-            .map(|_| ())
+    pub async fn run(self) -> MoraResult<()> {
+        MoraApi::new(self.config.port)
+            .start_listening()
+            .await
             .map_err(|e| MoraError::ApiError(e.to_string()))
     }
 }
 
-fn main() -> MoraResult<()> {
+#[tokio::main]
+async fn main() -> MoraResult<()> {
+    SimpleLogger::new().init().unwrap();
     let config = MoraConfig::from_env();
     let server = Server::new(config.ok())?;
-    server.run()
+    server.run().await
 }
