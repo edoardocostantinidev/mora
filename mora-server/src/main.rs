@@ -13,7 +13,6 @@ impl Server {
     pub fn new(config: Option<MoraConfig>) -> MoraResult<Self> {
         Ok(Self {
             config: config.unwrap_or_default(),
-            ..Default::default()
         })
     }
 
@@ -23,4 +22,10 @@ impl Server {
             .map(|_| ())
             .map_err(|e| MoraError::ApiError(e.to_string()))
     }
+}
+
+fn main() -> MoraResult<()> {
+    let config = MoraConfig::from_env();
+    let server = Server::new(config.ok())?;
+    server.run()
 }

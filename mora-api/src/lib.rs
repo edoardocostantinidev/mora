@@ -2,7 +2,7 @@ pub mod model;
 pub mod routes;
 pub mod services;
 
-use rocket::{Ignite, Rocket};
+use rocket::{Config, Ignite, Rocket};
 use routes::{channels, events, health, queues};
 
 #[macro_use]
@@ -13,7 +13,7 @@ pub struct MoraApi;
 impl MoraApi {
     #[rocket::main]
     pub async fn start_listening() -> Result<Rocket<Ignite>, rocket::Error> {
-        rocket::build()
+        rocket::custom()
             .manage(queues::state())
             .manage(health::state())
             .mount("/health", health::all())
