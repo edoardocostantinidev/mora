@@ -22,3 +22,4 @@ log = "0.4.17"
 simple_logger = "4.1.0"
 axum = { version = "0.6.18" }
 tokio = { version = "1.28.1", features = ["full"] }
+regex = { version = "1.8.1" }
