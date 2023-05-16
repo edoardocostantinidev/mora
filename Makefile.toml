@@ -26,13 +26,11 @@ args = ["test"]
 command = "cargo"
 args = ["run", "--bin", "mora-server"]
 
+
 [tasks.api-tests]
 workspace = false
-dependencies = [ "api-test-health" ]
-
-[tasks.api-test-health]
 command = "k6"
-args = ["run", "tests/api/health.js"]
+args = ["run", "-w", "--quiet", "k6/api.js"]
 
 [tasks.wtest]
 command = "cargo"
