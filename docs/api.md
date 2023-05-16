@@ -5,11 +5,30 @@ Here's a comprehensive list:
 
 - [x] `/health`
   - [x] `GET /`: returns `200 OK` if service is up and running correctly.
-- [ ] `/queues`
-  - [ ] `GET /`: gets all queues available
-  - [ ] `GET /{queue_name}`: gets basic informations about a specific queue.
-  - [ ] `POST /`: creates a queue.
-  - [ ] `DELETE /{queue_name}`: deletes a queue by queue name.
+- [x] `/queues`
+  - [x] `GET /`: gets all queues available returning:
+    ```json
+    {
+      "queues":[
+        {
+          "id": "blabla",
+          "pending_events_count": 120 
+        },
+        {
+          "id": "blabla2",
+          "pending_events_count": 110 
+        }
+      ]
+    }
+    ```
+  - [x] `GET /{queue_id}`: gets basic informations about a specific queue.
+  - [x] `POST /`: creates a queue. Must pass a `CreateQueueRequest` json as payload:
+        ```json
+        {
+          "id": "queue_id"
+        }
+        ```
+  - [x] `DELETE /{queue_id}`: deletes a queue by queue name.
 - [ ] `/events`
   - [ ] `POST /`: schedules an event. Must pass a `ScheduleEventRequest` json as payload:
     ```json

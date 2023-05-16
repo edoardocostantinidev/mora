@@ -6,56 +6,71 @@ use regex::Regex;
 use crate::temporal_queue::TemporalQueue;
 
 type Bytes = Vec<u8>;
-type QueueId<'a> = &'a str;
-pub struct QueuePool<'a> {
-    queues: HashMap<QueueId<'a>, TemporalQueue<Bytes>>,
-    capacity: usize,
+type QueueId = String;
+
+#[derive(Debug, Clone)]
+pub struct QueuePool {
+    queues: HashMap<QueueId, TemporalQueue<Bytes>>,
+    _capacity: usize,
 }
 
-impl<'a> QueuePool<'a> {
-    pub fn create_queue(&mut self, id: QueueId<'a>) -> MoraResult<()> {
-        if self.queues.contains_key(id) {
-            return Err(MoraError::QueueAlreadyExists(id.to_owned()));
+impl QueuePool {
+    pub fn new(capacity: Option<usize>) -> Self {
+        Self {
+            queues: HashMap::default(),
+            _capacity: capacity.unwrap_or(usize::MAX),
+        }
+    }
+
+    pub fn create_queue(&mut self, id: QueueId) -> MoraResult<()> {
+        if self.queues.contains_key(&id) {
+            return Err(MoraError::QueueAlreadyExists(id));
         }
 
         self.queues.insert(id, TemporalQueue::default());
-        self.capacity += 1;
+
         Ok(())
     }
 
-    pub fn delete_queue(&mut self, id: QueueId<'a>) -> MoraResult<QueueId> {
+    pub fn delete_queue(&mut self, id: QueueId) -> MoraResult<QueueId> {
         self.queues
             .remove(&id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
             .map(|_| id)
     }
 
-    pub fn get_queue(&self, id: QueueId<'a>) -> MoraResult<&TemporalQueue<Bytes>> {
+    pub fn get_queue(&self, id: QueueId) -> MoraResult<&TemporalQueue<Bytes>> {
         self.queues
             .get(&id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
     }
 
-    pub fn get_queue_mut(&mut self, id: QueueId<'a>) -> MoraResult<&mut TemporalQueue<Bytes>> {
+    pub fn get_queue_mut(&mut self, id: QueueId) -> MoraResult<&mut TemporalQueue<Bytes>> {
         self.queues
             .get_mut(&id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
     }
 
-    pub fn get_queues(&self, pattern: Regex) -> MoraResult<Vec<&TemporalQueue<Bytes>>> {
+    pub fn get_queues(&self, pattern: Regex) -> MoraResult<Vec<(String, &TemporalQueue<Bytes>)>> {
         Ok(self
             .queues
             .keys()
-            .filter(|k| pattern.is_match(k))
-            .filter_map(|k| self.queues.get(k))
+            .filter(|k| {
+                dbg!(&k);
+                pattern.is_match(k)
+            })
+            .map(|k| (k.to_owned(), self.queues.get(k).unwrap()))
             .collect())
     }
 
-    pub fn get_queues_mut(&mut self, pattern: Regex) -> MoraResult<Vec<&mut TemporalQueue<Bytes>>> {
+    pub fn get_queues_mut(
+        &mut self,
+        pattern: Regex,
+    ) -> MoraResult<Vec<(String, &mut TemporalQueue<Bytes>)>> {
         let mut queues = vec![];
         for (k, queue) in self.queues.iter_mut() {
             if pattern.is_match(k) {
-                queues.push(queue);
+                queues.push((k.to_owned(), queue));
             }
         }
         Ok(queues)

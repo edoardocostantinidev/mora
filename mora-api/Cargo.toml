@@ -7,9 +7,12 @@ edition = "2021"
 
 [dependencies]
 mora-core = { workspace = true }
+mora-queue = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
+serde = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 mockall = "0.11.2"

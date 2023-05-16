@@ -1,6 +1,6 @@
 use crate::priority_queue::{naive::NaivePriorityQueue, PriorityQueue};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TemporalQueue<V> {
     inner: NaivePriorityQueue<u128, V>,
     capacity: u128,

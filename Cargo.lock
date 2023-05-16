@@ -530,6 +530,9 @@ dependencies = [
  "mockall",
  "mockall_double",
  "mora-core",
+ "mora-queue",
+ "regex",
+ "serde",
  "tokio",
 ]
 

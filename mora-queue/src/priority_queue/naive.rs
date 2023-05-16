@@ -8,7 +8,7 @@ struct Node<K, V> {
     value: V,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NaivePriorityQueue<K, V> {
     items: VecDeque<Node<K, V>>,
 }
