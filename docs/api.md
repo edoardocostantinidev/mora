@@ -29,7 +29,7 @@ Here's a comprehensive list:
         }
         ```
   - [x] `DELETE /{queue_id}`: deletes a queue by queue name.
-- [ ] `/events`
+- [x] `/events`
   - [x] `POST /`: schedules an event. Must pass a `ScheduleEventRequest` json as payload:
     ```json
     {
