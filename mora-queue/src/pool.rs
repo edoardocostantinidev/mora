@@ -39,15 +39,15 @@ impl QueuePool {
             .map(|_| id)
     }
 
-    pub fn get_queue(&self, id: QueueId) -> MoraResult<&TemporalQueue<Bytes>> {
+    pub fn get_queue(&self, id: &QueueId) -> MoraResult<&TemporalQueue<Bytes>> {
         self.queues
-            .get(&id)
+            .get(id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
     }
 
-    pub fn get_queue_mut(&mut self, id: QueueId) -> MoraResult<&mut TemporalQueue<Bytes>> {
+    pub fn get_queue_mut(&mut self, id: &QueueId) -> MoraResult<&mut TemporalQueue<Bytes>> {
         self.queues
-            .get_mut(&id)
+            .get_mut(id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
     }
 

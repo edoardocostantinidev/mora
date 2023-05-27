@@ -30,14 +30,15 @@ Here's a comprehensive list:
         ```
   - [x] `DELETE /{queue_id}`: deletes a queue by queue name.
 - [ ] `/events`
-  - [ ] `POST /`: schedules an event. Must pass a `ScheduleEventRequest` json as payload:
+  - [x] `POST /`: schedules an event. Must pass a `ScheduleEventRequest` json as payload:
     ```json
     {
-      "data": "base64 encoded data"
+      "data": "base64 encoded data",
+      "queue": "test:queue",
       "schedule_rules": [
         {
           "schedule_at": 1684182908606,
-          "recurring_options": {
+          "recurring_options": null | {
             "times": 20,
             "delay": 3600000,
           }
@@ -45,12 +46,13 @@ Here's a comprehensive list:
       ]
     }
     ```
-    - [ ] **`data`**: base64 encoded payload.
-    - [ ] **`schedule_rules`** an array of objects contining:
-      - [ ] **`schedule_at`**: timestamp at which the event will be sent, must be an unsigned integer. 
-      - [ ] **`recurring_options`**:
-        - [ ] **`times`**: how many times should the event be scheduled in-between `delays`. Use `-1` to schedule the event infinite times.
-        - [ ] **`delay`**: delay in-between event schedules, in milliseconds.
+    - **`data`**: base64 encoded payload.
+    - **`schedule_rules`** an array of objects contining:
+      - **`schedule_at`**: timestamp at which the event will be sent, must be an unsigned integer.
+      - **`queue_name`**: name of the queue that will host the event.
+      - **`recurring_options`**:
+        - **`times`**: how many times should the event be scheduled in-between `delays`. Use `-1` to schedule the event infinite times.
+        - **`delay`**: delay in-between event schedules, in milliseconds.
 - [ ] `/channels`
   - [ ] `GET /`: retrieves all active channels
   - [ ] `GET /{channel_id}`: returns information about a specific channel

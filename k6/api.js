@@ -41,7 +41,26 @@ function queues() {
     });
 }
 
+function events() {
+    const events_path = `${path}/events`;
+    const queue_path = `${path}/queues`;
+    http.post(queue_path, JSON.stringify({ id: "test:events" }), { headers: { 'Content-Type': 'application/json' } });
+    const post1 = http.post(events_path, JSON.stringify({
+        "data": 'xyz==',
+        "schedule_rules": [
+            {
+                "queue": "test:events",
+                "schedule_at": Date.now() + 1000
+            }
+        ]
+    }), { headers: { 'Content-Type': 'application/json' } })
+    check(post1, {
+        'post /events: is status 200': (r) => r.status === 200,
+    })
+}
+
 export default function () {
     health();
     queues();
+    events();
 }
