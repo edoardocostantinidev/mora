@@ -1,4 +1,5 @@
 use axum::{
+    extract::State,
     routing::{delete, get, post},
     Router,
 };
@@ -11,6 +12,8 @@ use std::{
 };
 
 pub(crate) mod routes;
+pub(crate) type QueuePoolState = State<Arc<Mutex<QueuePool>>>;
+
 pub struct MoraApi {
     port: u16,
 }
@@ -27,6 +30,7 @@ impl MoraApi {
             .route("/queues/:queue_id", get(routes::queues::get_queue))
             .route("/queues", post(routes::queues::post_queue))
             .route("/queues/:queue_id", delete(routes::queues::delete_queue))
+            .route("/events", post(routes::events::schedule_event))
             .with_state(queue_pool);
         let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
             .parse()

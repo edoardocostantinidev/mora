@@ -1,13 +1,7 @@
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::Path, http::StatusCode, Json};
 use log::{debug, error};
-use mora_queue::pool::QueuePool;
-use std::sync::{Arc, Mutex};
 
-type QueuePoolState = State<Arc<Mutex<QueuePool>>>;
+use crate::QueuePoolState;
 
 #[derive(serde::Serialize)]
 pub struct GetQueuesResponse {
