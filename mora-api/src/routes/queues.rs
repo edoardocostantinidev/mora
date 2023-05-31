@@ -1,7 +1,12 @@
-use axum::{extract::Path, http::StatusCode, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
 use log::{debug, error};
+use mora_queue::pool::QueuePool;
 
-use crate::QueuePoolState;
+use crate::{handle_mora_error, handle_rw_lock_error, SharedState};
 
 #[derive(serde::Serialize)]
 pub struct GetQueuesResponse {
@@ -14,18 +19,18 @@ pub struct GetQueueResponse {
     pending_events_count: usize,
 }
 
-pub async fn get_queues(queue_pool: QueuePoolState) -> Result<Json<GetQueuesResponse>, StatusCode> {
+#[axum_macros::debug_handler]
+pub async fn get_queues(
+    state: State<SharedState>,
+) -> Result<Json<GetQueuesResponse>, (StatusCode, String)> {
     debug!("Received get_queues request");
-    let queue_pool = queue_pool.lock().map_err(|e| {
-        error!("error acquiring queue_pool lock {e}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-    let queues: Vec<GetQueueResponse> = queue_pool
+
+    let queues: Vec<GetQueueResponse> = state
+        .try_read()
+        .map_err(handle_rw_lock_error)?
+        .queue_pool
         .get_queues(regex::Regex::new(r".*").unwrap())
-        .map_err(|e| {
-            error!("{e}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(handle_mora_error)?
         .iter()
         .map(|q| GetQueueResponse {
             id: q.0.to_owned(),
@@ -38,13 +43,10 @@ pub async fn get_queues(queue_pool: QueuePoolState) -> Result<Json<GetQueuesResp
 
 pub async fn get_queue(
     queue_id: Path<String>,
-    queue_pool: QueuePoolState,
+    queue_pool: State<QueuePool>,
 ) -> Result<Json<GetQueueResponse>, StatusCode> {
     debug!("Received get_queue request");
-    let queue_pool = queue_pool.lock().map_err(|e| {
-        error!("error acquiring queue_pool lock {e}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+
     let queue: GetQueueResponse = queue_pool
         .get_queues(regex::Regex::new(&queue_id.0).unwrap())
         .map_err(|e| {
@@ -70,17 +72,11 @@ pub struct PostQueueRequest {
 }
 
 pub async fn post_queue(
-    queue_pool: QueuePoolState,
+    State(mut queue_pool): State<QueuePool>,
     queue_request: Json<PostQueueRequest>,
 ) -> Result<Json<GetQueueResponse>, (StatusCode, String)> {
     debug!("Received post_queues request: {:?}", &queue_request);
-    let mut queue_pool = queue_pool.lock().map_err(|e| {
-        error!("error acquiring queue_pool lock {e}");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Cannot acquire lock on queue_pool".to_owned(),
-        )
-    })?;
+
     let id = queue_request.id.to_owned();
     queue_pool
         .create_queue(id.to_owned())
@@ -97,17 +93,11 @@ pub async fn post_queue(
 }
 
 pub async fn delete_queue(
-    queue_pool: QueuePoolState,
+    State(mut queue_pool): State<QueuePool>,
     queue_id: Path<String>,
 ) -> Result<String, (StatusCode, String)> {
     debug!("Received delete_queues request: {:?}", &queue_id);
-    let mut queue_pool = queue_pool.lock().map_err(|e| {
-        error!("error acquiring queue_pool lock {e}");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Cannot acquire lock on queue_pool".to_owned(),
-        )
-    })?;
+
     let queue_id = queue_id.0;
     let queue_id = queue_pool.delete_queue(queue_id).map_err(|e| {
         let e_msg = format!("error deleting queue: {:?}", e);

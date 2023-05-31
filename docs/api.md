@@ -54,10 +54,10 @@ Here's a comprehensive list:
         - **`times`**: how many times should the event be scheduled in-between `delays`. Use `-1` to schedule the event infinite times.
         - **`delay`**: delay in-between event schedules, in milliseconds.
 - [ ] `/channels`
-  - [ ] `GET /`: retrieves all active channels
+  - [x] `GET /`: retrieves all active channels
   - [ ] `GET /{channel_id}`: returns information about a specific channel
   - [ ] `GET /{channel_id}/events`: polling endpoint.
-  - [ ] `POST /`: creates a new channel returning a unique ID and opening it.
+  - [x] `POST /`: creates a new channel returning a unique ID and opening it.
   - [ ] `DELETE /{channel_id}`: closes a channel and deletes it.
-  - [ ] `PUT /{channel_id}`: edits an active channel settings.
+  - [?] `PUT /{channel_id}`: edits an active channel settings.
 
