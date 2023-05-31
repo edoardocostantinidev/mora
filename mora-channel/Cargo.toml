@@ -1,0 +1,11 @@
+[package]
+name = "mora-channel"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mora-core = { workspace = true }
+uuid = { workspace = true }
+regex = { workspace = true }

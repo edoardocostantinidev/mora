@@ -12,15 +12,17 @@ members = [
 ]
 
 [workspace.dependencies]
-mora-core = {path = "./mora-core"}
-mora-queue = {path = "./mora-queue"}
-mora-api = {path = "./mora-api"}
-mora-server = {path = "./mora-server"}
-mora-client = {path = "./mora-client"}
-mora-cli = {path = "./mora-cli"}
+mora-core = { path = "./mora-core" }
+mora-channel = { path = "./mora-channel" }
+mora-queue = { path = "./mora-queue" }
+mora-api = { path = "./mora-api" }
+mora-server = { path = "./mora-server" }
+mora-client = { path = "./mora-client" }
+mora-cli = { path = "./mora-cli" }
 log = "0.4.17"
 simple_logger = "4.1.0"
 axum = { version = "0.6.18" }
 tokio = { version = "1.28.1", features = ["full"] }
 regex = { version = "1.8.1" }
-serde = { version = "1.0.163", features = ["derive"]}
+serde = { version = "1.0.163", features = ["derive"] }
+uuid = { version = "1.3.3", features = ["v4", "fast-rng", "macro-diagnostics"] }

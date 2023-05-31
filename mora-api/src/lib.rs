@@ -1,18 +1,27 @@
 use axum::{
-    extract::State,
+    extract::FromRef,
+    http::StatusCode,
     routing::{delete, get, post},
     Router,
 };
 use log::info;
+use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
 use std::{
     net::SocketAddr,
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock, TryLockError},
 };
 
 pub(crate) mod routes;
-pub(crate) type QueuePoolState = State<Arc<Mutex<QueuePool>>>;
+
+#[derive(Clone)]
+pub struct AppState {
+    queue_pool: QueuePool,
+    channel_manager: ChannelManager,
+}
+
+pub type SharedState = Arc<RwLock<AppState>>;
 
 pub struct MoraApi {
     port: u16,
@@ -23,7 +32,11 @@ impl MoraApi {
         MoraApi { port }
     }
     pub async fn start_listening(&self) -> MoraResult<()> {
-        let queue_pool = Arc::new(Mutex::new(QueuePool::new(None)));
+        let app_state = Arc::new(RwLock::new(AppState {
+            channel_manager: ChannelManager::default(),
+            queue_pool: QueuePool::new(None),
+        }));
+
         let app = Router::new()
             .route("/health", get(routes::health::get))
             .route("/queues", get(routes::queues::get_queues))
@@ -31,7 +44,9 @@ impl MoraApi {
             .route("/queues", post(routes::queues::post_queue))
             .route("/queues/:queue_id", delete(routes::queues::delete_queue))
             .route("/events", post(routes::events::schedule_event))
-            .with_state(queue_pool);
+            .route("/channels", post(routes::channels::create_channel))
+            .route("/channels", get(routes::channels::list_channels))
+            .with_state(app_state);
         let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
             .parse()
             .map_err(|e| MoraError::ApiError(format!("error parsing address: {e}")))?;
@@ -43,4 +58,12 @@ impl MoraApi {
 
         Ok(())
     }
+}
+
+pub(crate) fn handle_mora_error(error: MoraError) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+}
+
+pub(crate) fn handle_rw_lock_error<T>(error: TryLockError<T>) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
