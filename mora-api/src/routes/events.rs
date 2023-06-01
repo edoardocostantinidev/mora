@@ -1,8 +1,9 @@
 use axum::{extract::State, http::StatusCode, Json};
 use log::debug;
 use mora_core::result::MoraError;
-use mora_queue::pool::QueuePool;
 use serde::{Deserialize, Serialize};
+
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ScheduleEventRequest {
@@ -25,7 +26,7 @@ pub(crate) struct RecurringOptions {
 }
 
 pub(crate) async fn schedule_event(
-    State(mut queue_pool): State<QueuePool>,
+    State(app_state): State<AppState>,
     schedule_event_request: Json<ScheduleEventRequest>,
 ) -> Result<(), (StatusCode, String)> {
     debug!(
@@ -34,27 +35,24 @@ pub(crate) async fn schedule_event(
     );
 
     let binary_data = schedule_event_request.data.clone().into_bytes();
-    schedule_event_request
-        .schedule_rules
-        .clone()
-        .into_iter()
-        .map(|rule| {
-            let queue_name = rule.queue.clone();
-            let schedule_at = rule.schedule_at;
-            let queue = queue_pool.get_queue_mut(&queue_name).map_err(|e| {
-                if let MoraError::QueueNotFound(..) = e {
-                    (
-                        StatusCode::NOT_FOUND,
-                        format!("{} queue does not exist", &queue_name),
-                    )
-                } else {
-                    (StatusCode::INTERNAL_SERVER_ERROR, format!("{e}"))
-                }
-            })?;
+    for rule in schedule_event_request.schedule_rules.clone() {
+        let queue_name = rule.queue.clone();
+        let schedule_at = rule.schedule_at;
+        let mut queue_pool = app_state.queue_pool.lock().await;
+        let queue = queue_pool.get_queue_mut(&queue_name).map_err(|e| {
+            if let MoraError::QueueNotFound(..) = e {
+                (
+                    StatusCode::NOT_FOUND,
+                    format!("{} queue does not exist", &queue_name),
+                )
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("{e}"))
+            }
+        })?;
 
-            queue
-                .enqueue(schedule_at, binary_data.clone())
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e}")))
-        })
-        .collect::<Result<(), (StatusCode, String)>>()
+        queue
+            .enqueue(schedule_at, binary_data.clone())
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e}")))?;
+    }
+    Ok(())
 }
