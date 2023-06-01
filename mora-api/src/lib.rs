@@ -1,5 +1,4 @@
 use axum::{
-    extract::FromRef,
     http::StatusCode,
     routing::{delete, get, post},
     Router,
@@ -8,20 +7,19 @@ use log::info;
 use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
-use std::{
-    net::SocketAddr,
-    sync::{Arc, RwLock, TryLockError},
-};
+use std::{net::SocketAddr, sync::Arc};
+use tokio::sync::Mutex;
 
 pub(crate) mod routes;
 
+pub type QueuePoolState = Arc<Mutex<QueuePool>>;
+pub type ChannelManagerState = Arc<Mutex<ChannelManager>>;
+
 #[derive(Clone)]
 pub struct AppState {
-    queue_pool: QueuePool,
-    channel_manager: ChannelManager,
+    queue_pool: QueuePoolState,
+    channel_manager: ChannelManagerState,
 }
-
-pub type SharedState = Arc<RwLock<AppState>>;
 
 pub struct MoraApi {
     port: u16,
@@ -32,10 +30,10 @@ impl MoraApi {
         MoraApi { port }
     }
     pub async fn start_listening(&self) -> MoraResult<()> {
-        let app_state = Arc::new(RwLock::new(AppState {
-            channel_manager: ChannelManager::default(),
-            queue_pool: QueuePool::new(None),
-        }));
+        let app_state = AppState {
+            channel_manager: Arc::new(Mutex::new(ChannelManager::default())),
+            queue_pool: Arc::new(Mutex::new(QueuePool::new(None))),
+        };
 
         let app = Router::new()
             .route("/health", get(routes::health::get))
@@ -61,9 +59,5 @@ impl MoraApi {
 }
 
 pub(crate) fn handle_mora_error(error: MoraError) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
-}
-
-pub(crate) fn handle_rw_lock_error<T>(error: TryLockError<T>) -> (StatusCode, String) {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }

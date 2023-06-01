@@ -1,7 +1,8 @@
 use axum::{extract::State, http::StatusCode, Json};
 use log::{debug, error};
-use mora_channel::ChannelManager;
 use serde::{Deserialize, Serialize};
+
+use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct CreateChannelRequest {
@@ -14,7 +15,7 @@ pub struct CreateChannelResponse {
 }
 
 pub async fn create_channel(
-    State(mut channel_manager): State<ChannelManager>,
+    State(app_state): State<AppState>,
     request: Json<CreateChannelRequest>,
 ) -> Result<Json<CreateChannelResponse>, (StatusCode, String)> {
     debug!("Received request for channel creation...");
@@ -26,14 +27,18 @@ pub async fn create_channel(
         )
     })?;
     debug!("valid filter {:?}", &queue_filter);
-    debug!("{:?}", channel_manager);
-    let channel = channel_manager.create_channel(queue_filter).map_err(|e| {
-        error!("couldn't create channel: {e}");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't create channel: {e}"),
-        )
-    })?;
+    let channel = app_state
+        .channel_manager
+        .lock()
+        .await
+        .create_channel(queue_filter)
+        .map_err(|e| {
+            error!("couldn't create channel: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't create channel: {e}"),
+            )
+        })?;
     debug!("channel created {:?}", &channel);
     Ok(Json(CreateChannelResponse {
         channel_id: channel.id().to_owned(),
@@ -41,9 +46,12 @@ pub async fn create_channel(
 }
 
 pub async fn list_channels(
-    State(channel_manager): State<ChannelManager>,
+    State(app_state): State<AppState>,
 ) -> Result<Json<Vec<String>>, (StatusCode, String)> {
-    channel_manager
+    app_state
+        .channel_manager
+        .lock()
+        .await
         .get_channels()
         .map(|channels| Json(channels.into_iter().map(|c| c.id().to_owned()).collect()))
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))

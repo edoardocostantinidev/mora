@@ -1,12 +1,10 @@
+use crate::{handle_mora_error, AppState};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     Json,
 };
 use log::{debug, error};
-use mora_queue::pool::QueuePool;
-
-use crate::{handle_mora_error, handle_rw_lock_error, SharedState};
 
 #[derive(serde::Serialize)]
 pub struct GetQueuesResponse {
@@ -21,14 +19,14 @@ pub struct GetQueueResponse {
 
 #[axum_macros::debug_handler]
 pub async fn get_queues(
-    state: State<SharedState>,
+    State(app_state): State<AppState>,
 ) -> Result<Json<GetQueuesResponse>, (StatusCode, String)> {
     debug!("Received get_queues request");
 
-    let queues: Vec<GetQueueResponse> = state
-        .try_read()
-        .map_err(handle_rw_lock_error)?
+    let queues: Vec<GetQueueResponse> = app_state
         .queue_pool
+        .lock()
+        .await
         .get_queues(regex::Regex::new(r".*").unwrap())
         .map_err(handle_mora_error)?
         .iter()
@@ -41,13 +39,17 @@ pub async fn get_queues(
     Ok(Json(GetQueuesResponse { queues }))
 }
 
+#[axum_macros::debug_handler]
 pub async fn get_queue(
     queue_id: Path<String>,
-    queue_pool: State<QueuePool>,
+    State(app_state): State<AppState>,
 ) -> Result<Json<GetQueueResponse>, StatusCode> {
     debug!("Received get_queue request");
 
-    let queue: GetQueueResponse = queue_pool
+    let queue: GetQueueResponse = app_state
+        .queue_pool
+        .lock()
+        .await
         .get_queues(regex::Regex::new(&queue_id.0).unwrap())
         .map_err(|e| {
             error!("{e}");
@@ -72,13 +74,16 @@ pub struct PostQueueRequest {
 }
 
 pub async fn post_queue(
-    State(mut queue_pool): State<QueuePool>,
+    State(app_state): State<AppState>,
     queue_request: Json<PostQueueRequest>,
 ) -> Result<Json<GetQueueResponse>, (StatusCode, String)> {
     debug!("Received post_queues request: {:?}", &queue_request);
 
     let id = queue_request.id.to_owned();
-    queue_pool
+    app_state
+        .queue_pool
+        .lock()
+        .await
         .create_queue(id.to_owned())
         .map_err(|e| {
             error!("{e}");
@@ -93,16 +98,21 @@ pub async fn post_queue(
 }
 
 pub async fn delete_queue(
-    State(mut queue_pool): State<QueuePool>,
+    State(app_state): State<AppState>,
     queue_id: Path<String>,
 ) -> Result<String, (StatusCode, String)> {
     debug!("Received delete_queues request: {:?}", &queue_id);
 
     let queue_id = queue_id.0;
-    let queue_id = queue_pool.delete_queue(queue_id).map_err(|e| {
-        let e_msg = format!("error deleting queue: {:?}", e);
-        error!("{e_msg}");
-        (StatusCode::INTERNAL_SERVER_ERROR, e_msg)
-    })?;
+    let queue_id = app_state
+        .queue_pool
+        .lock()
+        .await
+        .delete_queue(queue_id)
+        .map_err(|e| {
+            let e_msg = format!("error deleting queue: {:?}", e);
+            error!("{e_msg}");
+            (StatusCode::INTERNAL_SERVER_ERROR, e_msg)
+        })?;
     Ok(format!("{queue_id} deleted"))
 }
