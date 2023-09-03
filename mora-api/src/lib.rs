@@ -44,6 +44,7 @@ impl MoraApi {
             .route("/events", post(routes::events::schedule_event))
             .route("/channels", post(routes::channels::create_channel))
             .route("/channels", get(routes::channels::list_channels))
+            .route("/channels/:channel_id", get(routes::channels::get_channel))
             .with_state(app_state);
         let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
             .parse()

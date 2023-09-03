@@ -1,4 +1,4 @@
-# API
+****# API
 
 Mora handles client requests via an HTTP API that exposes the various routes.
 Here's a comprehensive list:
@@ -57,7 +57,15 @@ Here's a comprehensive list:
   - [x] `GET /`: retrieves all active channels
   - [ ] `GET /{channel_id}`: returns information about a specific channel
   - [ ] `GET /{channel_id}/events`: polling endpoint.
-  - [x] `POST /`: creates a new channel returning a unique ID and opening it.
+  - [~] `POST /`: creates a new channel returning a unique ID and opening it. A payload containing informations about what queues to listen to can be provided, otherwise all events will be listened.
+  ```json
+  {
+    "queues":[
+      "queue_1",
+      "queue_2"
+    ]
+  }
+  ```
   - [ ] `DELETE /{channel_id}`: closes a channel and deletes it.
   - [?] `PUT /{channel_id}`: edits an active channel settings.
 
