@@ -23,36 +23,40 @@ command = "cargo"
 args = ["test"]
 
 [tasks.run-server]
+workspace = false
+cwd = "mora-server"
 command = "cargo"
-args = ["run", "--bin", "mora-server"]
+args = ["run"]
+watch = true
 
 
 [tasks.api-tests]
 workspace = false
 command = "k6"
 args = ["run", "-w", "--quiet", "k6/api.js"]
+watch = true
 
 [tasks.wtest]
 command = "cargo"
-args =  ["test"]
+args = ["test"]
 watch = true
 
 [tasks.wclippy]
 command = "cargo"
-args =  ["clippy"]
+args = ["clippy"]
 watch = true
 
 [tasks.wcheck]
 command = "cargo"
-args =  ["check"]
+args = ["check"]
 watch = true
 
 [tasks.wbuild]
 command = "cargo"
-args =  ["build"]
+args = ["build"]
 watch = true
 
 [tasks.wrun]
 command = "cargo"
-args =  ["run"]
+args = ["run"]
 watch = true

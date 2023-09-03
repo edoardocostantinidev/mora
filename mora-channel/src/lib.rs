@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use mora_core::result::MoraError;
-use regex::Regex;
+use std::collections::HashMap;
 
 #[derive(Default, Debug, Clone)]
 pub struct ChannelManager {
@@ -11,20 +9,34 @@ pub struct ChannelManager {
 #[derive(Debug, Clone)]
 pub struct Channel {
     id: String,
-    queue_filter: Regex,
+    queues: Vec<String>,
+    buffer_size: usize,
+    buffer_time: usize,
 }
 impl Channel {
     pub fn id(&self) -> &str {
         &self.id
     }
 
-    pub fn queue_filter(&self) -> &Regex {
-        &self.queue_filter
+    pub fn queues(&self) -> &Vec<String> {
+        &self.queues
+    }
+
+    pub fn buffer_size(&self) -> usize {
+        self.buffer_size
+    }
+    pub fn buffer_time(&self) -> usize {
+        self.buffer_time
     }
 }
 
 impl ChannelManager {
-    pub fn create_channel(&mut self, queue_filter: Regex) -> Result<Channel, MoraError> {
+    pub fn create_channel(
+        &mut self,
+        queues: Vec<String>,
+        buffer_size: usize,
+        buffer_time: usize,
+    ) -> Result<Channel, MoraError> {
         let mut channel_id = uuid::Uuid::new_v4().to_string();
 
         while self.channels.contains_key(&channel_id) {
@@ -33,7 +45,9 @@ impl ChannelManager {
 
         let channel = Channel {
             id: channel_id.clone(),
-            queue_filter,
+            queues,
+            buffer_size,
+            buffer_time,
         };
         self.channels.insert(channel_id, channel.clone());
         Ok(channel)
