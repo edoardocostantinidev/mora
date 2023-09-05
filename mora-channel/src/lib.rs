@@ -11,7 +11,7 @@ pub struct Channel {
     id: String,
     queues: Vec<String>,
     buffer_size: usize,
-    buffer_time: usize,
+    buffer_time: u128,
 }
 impl Channel {
     pub fn id(&self) -> &str {
@@ -25,7 +25,7 @@ impl Channel {
     pub fn buffer_size(&self) -> usize {
         self.buffer_size
     }
-    pub fn buffer_time(&self) -> usize {
+    pub fn buffer_time(&self) -> u128 {
         self.buffer_time
     }
 }
@@ -35,7 +35,7 @@ impl ChannelManager {
         &mut self,
         queues: Vec<String>,
         buffer_size: usize,
-        buffer_time: usize,
+        buffer_time: u128,
     ) -> Result<Channel, MoraError> {
         let mut channel_id = uuid::Uuid::new_v4().to_string();
 
@@ -61,8 +61,7 @@ impl ChannelManager {
         Ok(self.channels.get(channel_id))
     }
 
-    pub fn close_channel(&mut self, channel_id: &String) -> Result<(), MoraError> {
+    pub fn close_channel(&mut self, channel_id: &String) {
         self.channels.remove(channel_id);
-        Ok(())
     }
 }

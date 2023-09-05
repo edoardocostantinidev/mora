@@ -37,7 +37,7 @@ Here's a comprehensive list:
       "queue": "test:queue",
       "schedule_rules": [
         {
-          "schedule_at": 1684182908606,
+          "schedule_for": 1684182908606,
           "recurring_options": null | {
             "times": 20,
             "delay": 3600000,
@@ -48,16 +48,16 @@ Here's a comprehensive list:
     ```
     - **`data`**: base64 encoded payload.
     - **`schedule_rules`** an array of objects contining:
-      - **`schedule_at`**: timestamp at which the event will be sent, must be an unsigned integer.
+      - **`schedule_for`**: timestamp at which the event will be sent, must be an unsigned integer.
       - **`queue_name`**: name of the queue that will host the event.
       - **`recurring_options`**:
         - **`times`**: how many times should the event be scheduled in-between `delays`. Use `-1` to schedule the event infinite times.
         - **`delay`**: delay in-between event schedules, in milliseconds.
-- [ ] `/channels`
+- [x] `/channels`
   - [x] `GET /`: retrieves all active channels
-  - [ ] `GET /{channel_id}`: returns information about a specific channel
-  - [ ] `GET /{channel_id}/events`: polling endpoint.
-  - [~] `POST /`: creates a new channel returning a unique ID and opening it. A payload containing informations about what queues to listen to can be provided, otherwise all events will be listened.
+  - [x] `GET /{channel_id}`: returns information about a specific channel
+  - [x] `GET /{channel_id}/events`: polling endpoint.
+  - [x] `POST /`: creates a new channel returning a unique ID and opening it. A payload containing informations about what queues to listen to can be provided, otherwise all events will be listened.
   ```json
   {
     "queues":[
@@ -66,6 +66,5 @@ Here's a comprehensive list:
     ]
   }
   ```
-  - [ ] `DELETE /{channel_id}`: closes a channel and deletes it.
-  - [?] `PUT /{channel_id}`: edits an active channel settings.
+  - [x] `DELETE /{channel_id}`: closes a channel and deletes it.
 

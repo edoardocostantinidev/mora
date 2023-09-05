@@ -50,7 +50,7 @@ function events() {
         "schedule_rules": [
             {
                 "queue": "test:events",
-                "schedule_at": Date.now() + 1000
+                "schedule_for": Date.now() + 1000
             }
         ]
     }), { headers: { 'Content-Type': 'application/json' } })
@@ -76,7 +76,7 @@ function channels() {
         'mora_check: post /channels: is status 200': (r) => r.status === 200,
     })
     const schedule_date = Date.now() + 1000;
-    const schedule_event = http.post(events_path, JSON.stringify({
+    http.post(events_path, JSON.stringify({
         "data": 'xyz==',
         "schedule_rules": [
             {
@@ -112,11 +112,28 @@ function channels() {
         'mora_check: get /channels/{channel_id}/events: is body correct': (r) => r.body === JSON.stringify({
             events: [
                 {
-                    data: "xyz==",
-                    scheduled_for: schedule_date,
+                    data: "xyz=="
                 }
             ]
         })
+    });
+    const get4 = http.get(`${channels_path}/${channel_id}/events`);
+    check(get4, {
+        'mora_check: get /channels/{channel_id}/events: is status 200': (r) => r.status === 200,
+        'mora_check: get /channels/{channel_id}/events: is body empty after dequeued': (r) => r.body === JSON.stringify({
+            events: []
+        })
+    });
+
+    const del1 = http.del(`${channels_path}/${channel_id}`);
+    check(del1, {
+        'mora_check: delete /channels/{channel_id}: is status 200': (r) => r.status === 200,
+        'mora_check: delete /channels/{channel_id}: is body correct': (r) => r.body === ""
+    });
+    const get5 = http.get(`${channels_path}/${channel_id}`);
+    check(get5, {
+        'mora_check: delete /channels/{channel_id}: is status 200': (r) => r.status === 404,
+        'mora_check: delete /channels/{channel_id}: is body correct': (r) => r.body === `${channel_id} channel does not exist`
     });
 }
 

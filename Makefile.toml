@@ -22,6 +22,14 @@ dependencies = ["clean"]
 command = "cargo"
 args = ["test"]
 
+[tasks.watch-dev]
+dependencies = ["fmt", "clippy", "test"]
+
+[tasks.watch-api]
+workspace = false
+script = "./watch_api.sh"
+watch = true
+
 [tasks.run-server]
 workspace = false
 cwd = "mora-server"
@@ -31,10 +39,10 @@ watch = true
 
 
 [tasks.api-tests]
+cwd = "k6"
 workspace = false
 command = "k6"
-args = ["run", "-w", "--quiet", "k6/api.js"]
-watch = true
+args = ["run", "--quiet", "api.js"]
 
 [tasks.wtest]
 command = "cargo"
