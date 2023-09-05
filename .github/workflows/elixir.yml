@@ -1,33 +1,57 @@
-name: Elixir CI
+name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
   pull_request:
-    branches: [ master ]
 
 jobs:
-  build:
-
-    name: Build and test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Elixir
-      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
-      with:
-        elixir-version: '1.13.1' # Define the elixir version [required]
-        otp-version: '24.1' # Define the OTP version [required]
-    - name: Restore dependencies cache
-      uses: actions/cache@v2
-      with:
-        path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Install dependencies
-      working-directory: ./src/
-      run: mix deps.get
-    - name: Run tests
-      working-directory: ./src/
-      run: mix test
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
+          components: clippy
+      - name: Build | Lint
+        run: cargo clippy
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
+      - name: Build | Compile
+        run: cargo check
+  test:
+    name: Test
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+        rust:
+          - stable
+          - beta
+          - nightly
+    runs-on: ${{ matrix.os }}
+    needs: [compile]
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - name: Setup | Rust
+        uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: ${{ matrix.rust }}
+      - name: Build | Compile
+        run: cargo test
