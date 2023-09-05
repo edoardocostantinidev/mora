@@ -3,14 +3,15 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use log::{debug, error};
+use log::{debug, error, info};
+use mora_core::clock::Clock;
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 
 #[derive(Deserialize, Serialize)]
 pub struct BufferOptions {
-    time: usize,
+    time: u128,
     size: usize,
 }
 
@@ -102,4 +103,65 @@ pub async fn get_channel(
             },
         })),
     }
+}
+
+#[derive(Serialize)]
+struct Event {
+    data: String,
+}
+
+#[derive(Serialize)]
+pub struct GetChannelEventsResponse {
+    events: Vec<Event>,
+}
+
+pub async fn get_channel_events(
+    State(app_state): State<AppState>,
+    channel_id: Path<String>,
+) -> Result<Json<GetChannelEventsResponse>, (StatusCode, String)> {
+    info!("Received get_channel_events request");
+    let channel_manager = app_state.channel_manager.lock().await;
+    let mut queue_pool = app_state.queue_pool.lock().await;
+    let channel_opt = channel_manager
+        .get_channel(&channel_id.0)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    match channel_opt {
+        Some(channel) => {
+            let timestamp = Clock::now();
+            let delta = channel.buffer_time();
+            let mut events: Vec<Event> = vec![];
+            let queues = channel.queues();
+            info!("Found {:?}", &queues);
+            for queue_name in queues {
+                let queue = queue_pool
+                    .get_queue_mut(queue_name)
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                info!("Queue Found {:?}", &queue);
+                let data = queue.dequeue_until(timestamp + delta);
+                info!("Data Found {:?}", &data);
+                let dequeued_events: Result<Vec<_>, _> = data
+                    .iter()
+                    .map(|data| {
+                        Ok(Event {
+                            data: std::str::from_utf8(data)
+                                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+                                .to_owned(),
+                        })
+                    })
+                    .collect();
+                events.extend(dequeued_events?)
+            }
+
+            Ok(Json(GetChannelEventsResponse { events }))
+        }
+        None => Err((
+            StatusCode::NOT_FOUND,
+            format!("{} channel does not exist", &channel_id.0),
+        )),
+    }
+}
+
+pub async fn delete_channel(State(app_state): State<AppState>, channel_id: Path<String>) {
+    let mut channel_manager = app_state.channel_manager.lock().await;
+    channel_manager.close_channel(&channel_id.0)
 }
