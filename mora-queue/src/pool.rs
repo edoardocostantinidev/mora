@@ -15,10 +15,10 @@ pub struct QueuePool {
 }
 
 impl QueuePool {
-    pub fn new(capacity: Option<usize>) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self {
             queues: HashMap::default(),
-            _capacity: capacity.unwrap_or(usize::MAX),
+            _capacity: capacity,
         }
     }
 

@@ -26,6 +26,7 @@ args = ["test"]
 dependencies = ["fmt", "clippy", "test"]
 
 [tasks.watch-api]
+env = { MORA_CHANNEL_TIMEOUT_IN_MSEC = 1000 }
 workspace = false
 script = "./watch_api.sh"
 watch = true

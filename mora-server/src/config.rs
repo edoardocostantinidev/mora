@@ -1,30 +1,87 @@
-use config::Config;
-use mora_core::result::{MoraError, MoraResult};
+use log::warn;
+use mora_core::result::MoraResult;
+use serde::Deserialize;
 
-#[derive(Debug, serde_derive::Deserialize, PartialEq, Eq)]
+const DEFAULT_PORT: u16 = 2626;
+const DEFAULT_CHANNEL_TIMEOUT_IN_MSEC: usize = 3600 * 1000;
+const DEFAULT_QUEUE_POOL_CAPACITY: usize = usize::MAX;
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct MoraConfig {
-    pub port: u16,
-}
-
-impl Default for MoraConfig {
-    fn default() -> Self {
-        Self { port: 2626 }
-    }
+    channel_timeout_in_msec: usize,
+    port: u16,
+    queue_pool_capacity: usize,
 }
 
 impl MoraConfig {
-    pub fn from_env() -> MoraResult<Self> {
-        let env_config = Config::builder()
-            .add_source(config::Environment::with_prefix("MORA").try_parsing(true))
-            .build()
-            .unwrap()
-            .try_deserialize()
-            .map_err(|e| MoraError::ConfigError(e.to_string()));
+    pub fn build() -> MoraResult<Self> {
+        let port_var = std::env::var("MORA_PORT");
+        let channel_timeout_in_msec_var = std::env::var("MORA_CHANNEL_TIMEOUT_IN_MSEC");
+        let queue_pool_capacity_var = std::env::var("MORA_QUEUE_POOL_CAPACITY");
 
-        if env_config.is_ok() {
-            env_config
+        let port = if let Ok(port_str) = port_var {
+            port_str.parse().unwrap_or_else(|_| {
+                warn!("{port_str} not a valid port number, reverting to default ({DEFAULT_PORT})");
+                DEFAULT_PORT
+            })
         } else {
-            Ok(MoraConfig::default())
-        }
+            DEFAULT_PORT
+        };
+
+        let channel_timeout_in_msec = if let Ok(channel_timeout_in_msec_str) =
+            channel_timeout_in_msec_var
+        {
+            channel_timeout_in_msec_str.parse().unwrap_or_else(|_| {
+                warn!("{channel_timeout_in_msec_str} not a valid channel timeout number, reverting to default ({DEFAULT_CHANNEL_TIMEOUT_IN_MSEC})");
+                DEFAULT_CHANNEL_TIMEOUT_IN_MSEC
+            })
+        } else {
+            DEFAULT_CHANNEL_TIMEOUT_IN_MSEC
+        };
+
+        let queue_pool_capacity = if let Ok(queue_pool_capacity_str) = queue_pool_capacity_var {
+            queue_pool_capacity_str.parse().unwrap_or_else(|_| {
+                warn!("{queue_pool_capacity_str} not a valid queue pool capacity number, reverting to default ({DEFAULT_QUEUE_POOL_CAPACITY})");
+                DEFAULT_QUEUE_POOL_CAPACITY
+            })
+        } else {
+            DEFAULT_QUEUE_POOL_CAPACITY
+        };
+
+        Ok(Self {
+            channel_timeout_in_msec,
+            port,
+            queue_pool_capacity,
+        })
+    }
+
+    pub fn channel_timeout_in_msec(&self) -> usize {
+        self.channel_timeout_in_msec
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn queue_pool_capacity(&self) -> usize {
+        self.queue_pool_capacity
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config() {
+        std::env::set_var("MORA_CHANNEL_TIMEOUT_IN_MSEC", "100");
+        assert!(matches!(
+            MoraConfig::build().unwrap(),
+            MoraConfig {
+                channel_timeout_in_msec: 100,
+                ..
+            }
+        ));
+        std::env::remove_var("MORA_CHANNEL_TIMEOUT_IN_MSEC");
     }
 }
