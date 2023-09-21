@@ -9,13 +9,14 @@ edition = "2021"
 mora-core = { workspace = true }
 mora-channel = { workspace = true }
 mora-queue = { workspace = true }
+
 axum = { workspace = true }
-tokio = { workspace = true }
+axum-macros = { workspace = true }
 log = { workspace = true }
-serde = { workspace = true }
 regex = { workspace = true }
-axum-macros = "0.3.7"
+serde = { workspace = true }
+tokio = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
 
 [dev-dependencies]
-mockall = "0.11.2"
-mockall_double = "^0.3.0"
