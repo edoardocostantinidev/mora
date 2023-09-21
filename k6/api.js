@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 
 const path = 'http://localhost:2626';
 
@@ -85,19 +85,19 @@ function channels() {
             }
         ]
     }), { headers: { 'Content-Type': 'application/json' } })
-    const channel_id = JSON.parse(post1.body).channel_id;
+    const channel_id_1 = JSON.parse(post1.body).channel_id;
     const get1 = http.get(`${channels_path}`);
     check(get1, {
         'mora_check: get /channels: is status 200': (r) => r.status === 200,
         'mora_check: get /channels: is body correct': (r) => r.body === JSON.stringify({
-            channels: [channel_id]
+            channels: [channel_id_1]
         })
     });
-    const get2 = http.get(`${channels_path}/${channel_id}`);
+    const get2 = http.get(`${channels_path}/${channel_id_1}`);
     check(get2, {
         'mora_check: get /channels/{channel_id}: is status 200': (r) => r.status === 200,
         'mora_check: get /channels/{channel_id}: is body correct': (r) => r.body === JSON.stringify({
-            channel_id: channel_id,
+            channel_id: channel_id_1,
             queues: ["test:channels"],
             buffer_options: {
                 time: 1000,
@@ -106,7 +106,7 @@ function channels() {
         })
     });
 
-    const get3 = http.get(`${channels_path}/${channel_id}/events`);
+    const get3 = http.get(`${channels_path}/${channel_id_1}/events`);
     check(get3, {
         'mora_check: get /channels/{channel_id}/events: is status 200': (r) => r.status === 200,
         'mora_check: get /channels/{channel_id}/events: is body correct': (r) => r.body === JSON.stringify({
@@ -117,7 +117,7 @@ function channels() {
             ]
         })
     });
-    const get4 = http.get(`${channels_path}/${channel_id}/events`);
+    const get4 = http.get(`${channels_path}/${channel_id_1}/events`);
     check(get4, {
         'mora_check: get /channels/{channel_id}/events: is status 200': (r) => r.status === 200,
         'mora_check: get /channels/{channel_id}/events: is body empty after dequeued': (r) => r.body === JSON.stringify({
@@ -125,21 +125,48 @@ function channels() {
         })
     });
 
-    const del1 = http.del(`${channels_path}/${channel_id}`);
+    const del1 = http.del(`${channels_path}/${channel_id_1}`);
     check(del1, {
         'mora_check: delete /channels/{channel_id}: is status 200': (r) => r.status === 200,
         'mora_check: delete /channels/{channel_id}: is body correct': (r) => r.body === ""
     });
-    const get5 = http.get(`${channels_path}/${channel_id}`);
+    const get5 = http.get(`${channels_path}/${channel_id_1}`);
     check(get5, {
-        'mora_check: delete /channels/{channel_id}: is status 200': (r) => r.status === 404,
-        'mora_check: delete /channels/{channel_id}: is body correct': (r) => r.body === `${channel_id} channel does not exist`
+        'mora_check: get /channels/{channel_id}: is status 404': (r) => r.status === 404,
+        'mora_check: get /channels/{channel_id}: is body correct': (r) => r.body === `${channel_id_1} channel does not exist`
+    });
+
+    const post2 = http.post(channels_path, JSON.stringify({
+        buffer_options: {
+            time: 1000,
+            size: 10,
+        }, queues: ["test:channels"]
+    }), { headers: { 'Content-Type': 'application/json' } });
+    sleep(10);
+    const channel_id_2 = JSON.parse(post2.body).channel_id;
+    const get6 = http.get(`${channels_path}/${channel_id_2}`);
+    console.log(get6.body);
+    check(get6, {
+        'mora_check: get after timeout /channels/{channel_id}: is status 404': (r) => r.status === 404,
+        'mora_check: get after timeout /channels/{channel_id}: is body correct': (r) => r.body === `${channel_id_2} channel does not exist`
     });
 }
 
 export default function () {
+    console.log("mora_check: starting health check testing");
     health();
+    console.log("mora_check: finished health check testing");
+
+    console.log("mora_check: starting queues check testing");
     queues();
+    console.log("mora_check: finished queues check testing");
+
+    console.log("mora_check: starting events check testing");
     events();
+    console.log("mora_check: finished events check testing");
+
+    console.log("mora_check: starting channels check testing");
     channels();
+    console.log("mora_check: finished channels check testing");
+
 }

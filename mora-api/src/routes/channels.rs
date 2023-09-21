@@ -97,6 +97,7 @@ pub struct GetChannelResponse {
     channel_id: String,
     queues: Vec<String>,
     buffer_options: BufferOptions,
+    msec_from_last_op: usize,
 }
 
 /// Get an active channel
@@ -117,9 +118,9 @@ pub async fn get_channel(
     State(app_state): State<AppState>,
     channel_id: Path<String>,
 ) -> Result<Json<GetChannelResponse>, (StatusCode, String)> {
-    let channel_manager = app_state.channel_manager.lock().await;
+    let mut channel_manager = app_state.channel_manager.lock().await;
     let channel = channel_manager
-        .get_channel(&channel_id.0)
+        .get_mut_channel(&channel_id.0)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     match channel {
@@ -134,6 +135,7 @@ pub async fn get_channel(
                 size: channel.buffer_size(),
                 time: channel.buffer_time(),
             },
+            msec_from_last_op: channel.msec_from_last_op(),
         })),
     }
 }
@@ -167,10 +169,10 @@ pub async fn get_channel_events(
     channel_id: Path<String>,
 ) -> Result<Json<GetChannelEventsResponse>, (StatusCode, String)> {
     info!("Received get_channel_events request");
-    let channel_manager = app_state.channel_manager.lock().await;
+    let mut channel_manager = app_state.channel_manager.lock().await;
     let mut queue_pool = app_state.queue_pool.lock().await;
     let channel_opt = channel_manager
-        .get_channel(&channel_id.0)
+        .get_mut_channel(&channel_id.0)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     match channel_opt {
         Some(channel) => {

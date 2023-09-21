@@ -71,10 +71,14 @@ impl MoraApi {
     pub fn new(port: u16) -> Self {
         MoraApi { port }
     }
-    pub async fn start_listening(&self) -> MoraResult<()> {
+    pub async fn start_listening(
+        &self,
+        channel_manager: Arc<Mutex<ChannelManager>>,
+        queue_pool: Arc<Mutex<QueuePool>>,
+    ) -> MoraResult<()> {
         let app_state = AppState {
-            channel_manager: Arc::new(Mutex::new(ChannelManager::default())),
-            queue_pool: Arc::new(Mutex::new(QueuePool::new(None))),
+            channel_manager,
+            queue_pool,
         };
 
         let app = Router::new()
