@@ -1,4 +1,4 @@
-/// Health Check API
+/// Health Check to verify system integrity and functionality.
 #[utoipa::path(
         get,
         path = "/health",

@@ -27,24 +27,51 @@ pub struct MoraApi {
     port: u16,
 }
 
+#[derive(OpenApi)]
+#[openapi(
+paths(
+    routes::health::get,
+    routes::queues::get_queues,
+    routes::queues::get_queue,
+    routes::queues::create_queue,
+    routes::queues::delete_queue,
+    routes::events::schedule_event,
+    routes::channels::create_channel,
+    routes::channels::list_channels,
+    routes::channels::get_channel,
+    routes::channels::delete_channel,
+    routes::channels::get_channel_events,
+),
+components(
+    schemas(
+        routes::events::ScheduleEventRequest,
+        routes::events::ScheduleRules,
+        routes::events::RecurringOptions,
+    ),
+    schemas(
+        routes::queues::GetQueueResponse,
+        routes::queues::GetQueuesResponse,
+    ),
+    schemas(
+        routes::channels::GetChannelResponse,
+        routes::channels::BufferOptions,
+        routes::channels::CreateChannelRequest,
+        routes::channels::CreateChannelResponse,
+        routes::channels::ListChannelsResponse,
+        routes::channels::GetChannelEventsResponse,
+    ),
+),
+tags(
+    (name = "mora", description = "Mora REST API")
+)
+)]
+struct ApiDoc;
+
 impl MoraApi {
     pub fn new(port: u16) -> Self {
         MoraApi { port }
     }
     pub async fn start_listening(&self) -> MoraResult<()> {
-        #[derive(OpenApi)]
-        #[openapi(
-        paths(
-            routes::health::get,
-        ),
-        components(
-            schemas()
-        ),
-        tags(
-            (name = "mora", description = "Mora REST API")
-        )
-    )]
-        struct ApiDoc;
         let app_state = AppState {
             channel_manager: Arc::new(Mutex::new(ChannelManager::default())),
             queue_pool: Arc::new(Mutex::new(QueuePool::new(None))),
@@ -55,7 +82,7 @@ impl MoraApi {
             .route("/health", get(routes::health::get))
             .route("/queues", get(routes::queues::get_queues))
             .route("/queues/:queue_id", get(routes::queues::get_queue))
-            .route("/queues", post(routes::queues::post_queue))
+            .route("/queues", post(routes::queues::create_queue))
             .route("/queues/:queue_id", delete(routes::queues::delete_queue))
             .route("/events", post(routes::events::schedule_event))
             .route("/channels", post(routes::channels::create_channel))
