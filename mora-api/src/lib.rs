@@ -9,6 +9,8 @@ use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod routes;
 
@@ -30,12 +32,26 @@ impl MoraApi {
         MoraApi { port }
     }
     pub async fn start_listening(&self) -> MoraResult<()> {
+        #[derive(OpenApi)]
+        #[openapi(
+        paths(
+            routes::health::get,
+        ),
+        components(
+            schemas()
+        ),
+        tags(
+            (name = "mora", description = "Mora REST API")
+        )
+    )]
+        struct ApiDoc;
         let app_state = AppState {
             channel_manager: Arc::new(Mutex::new(ChannelManager::default())),
             queue_pool: Arc::new(Mutex::new(QueuePool::new(None))),
         };
 
         let app = Router::new()
+            .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
             .route("/health", get(routes::health::get))
             .route("/queues", get(routes::queues::get_queues))
             .route("/queues/:queue_id", get(routes::queues::get_queue))
