@@ -2,28 +2,39 @@ use axum::{extract::State, http::StatusCode, Json};
 use log::debug;
 use mora_core::result::MoraError;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::AppState;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub(crate) struct ScheduleEventRequest {
     data: String,
     schedule_rules: Vec<ScheduleRules>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub(crate) struct ScheduleRules {
     schedule_for: u128,
     queue: String,
     recurring_options: Option<RecurringOptions>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub(crate) struct RecurringOptions {
     times: u128,
     delay: u128,
 }
 
+/// Schedule event POST.
+#[utoipa::path(
+        post,
+        path = "/events",
+        responses(
+            (status = 200, description= "Event is scheduled correctly.", body = ()),
+            (status = 502, description= "Something went wrong while scheduling event", body = String),
+            (status = 404, description= "Queue was not found", body = String)
+        )
+    )]
 pub(crate) async fn schedule_event(
     State(app_state): State<AppState>,
     schedule_event_request: Json<ScheduleEventRequest>,

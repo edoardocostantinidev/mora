@@ -5,18 +5,28 @@ use axum::{
     Json,
 };
 use log::{debug, error};
+use utoipa::ToSchema;
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, ToSchema)]
 pub struct GetQueuesResponse {
     queues: Vec<GetQueueResponse>,
 }
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, ToSchema)]
 pub struct GetQueueResponse {
     id: String,
     pending_events_count: usize,
 }
 
+/// List all queues.
+#[utoipa::path(
+        get,
+        path = "/queues",
+        responses(
+            (status = 200, description= "List all queues.", body = [GetQueueResponse]),
+            (status = 502, description= "Something went wrong while listing queues", body = String),
+        )
+    )]
 #[axum_macros::debug_handler]
 pub async fn get_queues(
     State(app_state): State<AppState>,
@@ -39,6 +49,19 @@ pub async fn get_queues(
     Ok(Json(GetQueuesResponse { queues }))
 }
 
+/// Get informations about a queue.
+#[utoipa::path(
+        get,
+        path = "/queues",
+        params (
+            ("queue_id" = str, Path, description="Queue ID")
+        ),
+        responses(
+            (status = 200, description= "Get informations about a queue.", body = GetQueueResponse),
+            (status = 502, description= "Something went wrong while getting the queue.", body = String),
+            (status = 404, description= "Queue not found.", body = String),
+        )
+    )]
 #[axum_macros::debug_handler]
 pub async fn get_queue(
     queue_id: Path<String>,
@@ -68,16 +91,25 @@ pub async fn get_queue(
     Ok(Json(queue))
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, ToSchema)]
 pub struct PostQueueRequest {
     id: String,
 }
 
-pub async fn post_queue(
+/// Creates a queue.
+#[utoipa::path(
+        post,
+        path = "/queues",
+        responses(
+            (status = 200, description= "Queue is created.", body = GetQueueResponse),
+            (status = 502, description= "Something went wrong while creating a queue", body = String),
+        )
+    )]
+pub async fn create_queue(
     State(app_state): State<AppState>,
     queue_request: Json<PostQueueRequest>,
 ) -> Result<Json<GetQueueResponse>, (StatusCode, String)> {
-    debug!("Received post_queues request: {:?}", &queue_request);
+    debug!("Received create_queues request: {:?}", &queue_request);
 
     let id = queue_request.id.to_owned();
     app_state
@@ -97,6 +129,18 @@ pub async fn post_queue(
         })
 }
 
+/// Deletes a queue.
+#[utoipa::path(
+        delete,
+        path = "/queues",
+        params (
+            ("queue_id" = str, Path, description="Queue ID")
+        ),
+        responses(
+            (status = 200, description= "Queue is deleted.", body = String),
+            (status = 502, description= "Something went wrong while deleting a queue", body = String),
+        )
+    )]
 pub async fn delete_queue(
     State(app_state): State<AppState>,
     queue_id: Path<String>,
