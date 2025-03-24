@@ -107,7 +107,7 @@ pub struct GetChannelResponse {
         params (
             ("id" = str, Path, description="An active channel ID")
         ),
-        
+
         responses(
             (status = 200, description= "Channel created.", body = GetChannelResponse),
             (status = 502, description= "Something went wrong while creating the channel", body = String),
@@ -157,7 +157,7 @@ pub struct GetChannelEventsResponse {
         params (
             ("id" = str, Path, description="An active channel ID")
         ),
-        
+
         responses(
             (status = 200, description= "Channel created.", body = GetChannelResponse),
             (status = 502, description= "Something went wrong while getting channel events", body = String),
@@ -217,7 +217,7 @@ pub async fn get_channel_events(
         params (
             ("id" = str, Path, description="An active channel ID")
         ),
-        
+
         responses(
             (status = 200, description= "Channel created.", body = GetChannelResponse)
         )
