@@ -9,8 +9,6 @@ use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 pub(crate) mod routes;
 
@@ -27,46 +25,6 @@ pub struct MoraApi {
     port: u16,
 }
 
-#[derive(OpenApi)]
-#[openapi(
-paths(
-    routes::health::get,
-    routes::queues::get_queues,
-    routes::queues::get_queue,
-    routes::queues::create_queue,
-    routes::queues::delete_queue,
-    routes::events::schedule_event,
-    routes::channels::create_channel,
-    routes::channels::list_channels,
-    routes::channels::get_channel,
-    routes::channels::delete_channel,
-    routes::channels::get_channel_events,
-),
-components(
-    schemas(
-        routes::events::ScheduleEventRequest,
-        routes::events::ScheduleRules,
-        routes::events::RecurringOptions,
-    ),
-    schemas(
-        routes::queues::GetQueueResponse,
-        routes::queues::GetQueuesResponse,
-    ),
-    schemas(
-        routes::channels::GetChannelResponse,
-        routes::channels::BufferOptions,
-        routes::channels::CreateChannelRequest,
-        routes::channels::CreateChannelResponse,
-        routes::channels::ListChannelsResponse,
-        routes::channels::GetChannelEventsResponse,
-    ),
-),
-tags(
-    (name = "mora", description = "Mora REST API")
-)
-)]
-struct ApiDoc;
-
 impl MoraApi {
     pub fn new(port: u16) -> Self {
         MoraApi { port }
@@ -82,7 +40,6 @@ impl MoraApi {
         };
 
         let app = Router::new()
-            .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
             .route("/health", get(routes::health::get))
             .route("/queues", get(routes::queues::get_queues))
             .route("/queues/:queue_id", get(routes::queues::get_queue))
@@ -105,10 +62,15 @@ impl MoraApi {
             .parse()
             .map_err(|e| MoraError::ApiError(format!("error parsing address: {e}")))?;
         info!("Starting API Server");
-        axum::Server::bind(addr)
-            .serve(app.into_make_service())
+
+        let listener = tokio::net::TcpListener::bind(addr)
             .await
-            .map_err(|e| MoraError::ApiError(format!("error starting api server: {e}")))?;
+            .map_err(|e| MoraError::ApiError(format!("error binding listener: {e}")))?;
+        let service = app.into_make_service();
+
+        axum::serve(listener, service)
+            .await
+            .map_err(|e| MoraError::ApiError(format!("error serving: {e}")))?;
 
         Ok(())
     }

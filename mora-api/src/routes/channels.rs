@@ -6,36 +6,27 @@ use axum::{
 use log::{debug, error, info};
 use mora_core::clock::Clock;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::AppState;
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Deserialize, Serialize)]
 pub struct BufferOptions {
     time: u128,
     size: usize,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 pub struct CreateChannelRequest {
     queues: Vec<String>,
     buffer_options: BufferOptions,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
 pub struct CreateChannelResponse {
     channel_id: String,
 }
 
 /// Creates a channel.
-#[utoipa::path(
-        post,
-        path = "/channels",
-        responses(
-            (status = 200, description= "Channel created.", body = CreateChannelResponse),
-            (status = 502, description= "Something went wrong while creating the channel", body = String),
-        )
-    )]
 pub async fn create_channel(
     State(app_state): State<AppState>,
     request: Json<CreateChannelRequest>,
@@ -63,20 +54,12 @@ pub async fn create_channel(
     }))
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
 pub struct ListChannelsResponse {
     channels: Vec<String>,
 }
 
 /// List active channels
-#[utoipa::path(
-        get,
-        path = "/channels",
-        responses(
-            (status = 200, description= "All active channels are returned.", body = ListChannelsResponse),
-            (status = 502, description= "Something went wrong while creating the channel", body = String),
-        )
-    )]
 pub async fn list_channels(
     State(app_state): State<AppState>,
 ) -> Result<Json<ListChannelsResponse>, (StatusCode, String)> {
@@ -92,7 +75,7 @@ pub async fn list_channels(
     Ok(Json(ListChannelsResponse { channels }))
 }
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Deserialize, Serialize)]
 pub struct GetChannelResponse {
     channel_id: String,
     queues: Vec<String>,
@@ -101,19 +84,6 @@ pub struct GetChannelResponse {
 }
 
 /// Get an active channel
-#[utoipa::path(
-        get,
-        path = "/channels",
-        params (
-            ("id" = str, Path, description="An active channel ID")
-        ),
-
-        responses(
-            (status = 200, description= "Channel created.", body = GetChannelResponse),
-            (status = 502, description= "Something went wrong while creating the channel", body = String),
-            (status = 404, description= "The channel was not found", body = String),
-        )
-    )]
 pub async fn get_channel(
     State(app_state): State<AppState>,
     channel_id: Path<String>,
@@ -140,30 +110,16 @@ pub async fn get_channel(
     }
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
 struct Event {
     data: String,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
 pub struct GetChannelEventsResponse {
     events: Vec<Event>,
 }
 
-/// Get active channel events
-#[utoipa::path(
-        get,
-        path = "/channels/:id/events",
-        params (
-            ("id" = str, Path, description="An active channel ID")
-        ),
-
-        responses(
-            (status = 200, description= "Channel created.", body = GetChannelResponse),
-            (status = 502, description= "Something went wrong while getting channel events", body = String),
-            (status = 404, description= "The channel was not found", body = String),
-        )
-    )]
 pub async fn get_channel_events(
     State(app_state): State<AppState>,
     channel_id: Path<String>,
@@ -211,17 +167,6 @@ pub async fn get_channel_events(
 }
 
 /// Deletes an active channel
-#[utoipa::path(
-        delete,
-        path = "/channels",
-        params (
-            ("id" = str, Path, description="An active channel ID")
-        ),
-
-        responses(
-            (status = 200, description= "Channel created.", body = GetChannelResponse)
-        )
-    )]
 pub async fn delete_channel(State(app_state): State<AppState>, channel_id: Path<String>) {
     let mut channel_manager = app_state.channel_manager.lock().await;
     channel_manager.close_channel(&channel_id.0)
