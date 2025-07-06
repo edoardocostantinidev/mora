@@ -1,16 +1,16 @@
-use log::warn;
 use mora_core::result::MoraResult;
-use serde::Deserialize;
+use tracing::{info, warn, Level};
 
 const DEFAULT_PORT: u16 = 2626;
 const DEFAULT_CHANNEL_TIMEOUT_IN_MSEC: usize = 3600 * 1000;
 const DEFAULT_QUEUE_POOL_CAPACITY: usize = usize::MAX;
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MoraConfig {
     channel_timeout_in_msec: usize,
     port: u16,
     queue_pool_capacity: usize,
+    log_level: Level,
 }
 
 impl MoraConfig {
@@ -48,10 +48,21 @@ impl MoraConfig {
             DEFAULT_QUEUE_POOL_CAPACITY
         };
 
+        let log_level = if let Ok(log_level_str) = std::env::var("MORA_LOG_LEVEL") {
+            log_level_str.parse().unwrap_or_else(|_| {
+                warn!("{log_level_str} not a valid log level, reverting to default trace level)");
+                Level::TRACE
+            })
+        } else {
+            info!("No log level provided, reverting to default trace level");
+            Level::TRACE
+        };
+
         Ok(Self {
             channel_timeout_in_msec,
             port,
             queue_pool_capacity,
+            log_level,
         })
     }
 

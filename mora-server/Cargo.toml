@@ -6,12 +6,18 @@ default-run = "mora-server"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-config = "0.13.2"
-log = { workspace = true }
+config = "0.15.11"
 mora-api = { workspace = true }
 mora-channel = { workspace = true }
 mora-core = { workspace = true }
 mora-queue = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-stdout = { workspace = true }
 serde = { workspace = true }
 simple_logger = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-loki = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }

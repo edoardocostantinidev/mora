@@ -1,0 +1,99 @@
+{
+    "id": null,
+    "title": "Mora Server Dashboard",
+    "tags": [
+        "rust",
+        "mora"
+    ],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+        {
+            "id": 1,
+            "title": "HTTP Request Rate",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "rate(http_requests_total[5m])",
+                    "legendFormat": "{{method}} {{status}}"
+                }
+            ],
+            "yAxes": [
+                {
+                    "label": "requests/sec"
+                }
+            ],
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            }
+        },
+        {
+            "id": 2,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "95th percentile"
+                },
+                {
+                    "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "50th percentile"
+                }
+            ],
+            "yAxes": [
+                {
+                    "label": "seconds"
+                }
+            ],
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            }
+        },
+        {
+            "id": 3,
+            "title": "Active Channels",
+            "type": "stat",
+            "targets": [
+                {
+                    "expr": "mora_active_channels",
+                    "legendFormat": "Active Channels"
+                }
+            ],
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 8
+            }
+        },
+        {
+            "id": 4,
+            "title": "Queue Pool Usage",
+            "type": "stat",
+            "targets": [
+                {
+                    "expr": "mora_queue_pool_usage",
+                    "legendFormat": "Pool Usage"
+                }
+            ],
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 8
+            }
+        }
+    ],
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "refresh": "5s"
+}

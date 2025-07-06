@@ -69,3 +69,19 @@ watch = true
 command = "cargo"
 args = ["run"]
 watch = true
+
+[tasks.docker-build]
+command = "docker"
+args = ["build", "-t", "mora-server", "."]
+
+[tasks.docker-compose-up]
+command = "docker-compose"
+args = ["-f", "dev.docker-compose.yml", "up", "-d"]
+
+[tasks.docker-compose-down]
+command = "docker-compose"
+args = ["-f", "dev.docker-compose.yml", "down"]
+
+[tasks.docker-compose-build-up]
+command = "docker-compose"
+args = ["-f", "dev.docker-compose.yml", "up", "--build", "-d"]

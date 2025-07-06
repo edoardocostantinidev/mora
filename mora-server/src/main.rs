@@ -1,13 +1,19 @@
 use std::{sync::Arc, time::Duration};
 
 use crate::config::MoraConfig;
-use log::info;
 use mora_api::MoraApi;
 use mora_channel::ChannelManager;
-use mora_core::result::MoraResult;
+use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
-use simple_logger::SimpleLogger;
+use opentelemetry::trace::{Tracer, TracerProvider as _};
+use opentelemetry_sdk::trace::SdkTracerProvider;
 use tokio::{sync::Mutex, task::JoinSet, time::sleep};
+use tracing::info;
+use tracing::{error, span};
+use tracing_loki::url;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::Registry;
 
 pub mod config;
 
@@ -22,7 +28,6 @@ impl Server {
     }
 
     pub async fn run(self) -> MoraResult<()> {
-        log::set_max_level(log::LevelFilter::Info);
         let mut tasks = JoinSet::new();
         let channel_manager = Arc::new(Mutex::new(ChannelManager::new()));
         let queue_pool = Arc::new(Mutex::new(QueuePool::new(
@@ -74,8 +79,30 @@ impl Server {
 
 #[tokio::main]
 async fn main() -> MoraResult<()> {
-    SimpleLogger::new().init().unwrap();
     let config = MoraConfig::build()?;
+
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+        .build();
+    let tracer = provider.tracer("mora-server");
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    let (layer, task) = tracing_loki::builder()
+        .label("app", "mora")
+        .map_err(|e| MoraError::GenericError(e.to_string()))?
+        .label("component", "server")
+        .map_err(|e| MoraError::GenericError(e.to_string()))?
+        .build_url(url::Url::parse("http://loki:3100").unwrap())
+        .map_err(|e| MoraError::GenericError(e.to_string()))?;
+
+    tracing_subscriber::registry()
+        .with(layer)
+        .with(telemetry)
+        .with(tracing_subscriber::fmt::Layer::new())
+        .init();
+    tokio::spawn(async move {
+        task.await;
+    });
     let server = Server::new(config);
     server.run().await
 }

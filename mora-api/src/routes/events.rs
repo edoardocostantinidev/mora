@@ -1,7 +1,7 @@
 use axum::{extract::State, http::StatusCode, Json};
-use log::debug;
 use mora_core::result::MoraError;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::AppState;
 

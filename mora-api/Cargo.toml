@@ -12,7 +12,7 @@ mora-queue = { workspace = true }
 
 axum = { workspace = true }
 axum-macros = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }

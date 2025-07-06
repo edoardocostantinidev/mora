@@ -14,4 +14,6 @@ pub enum MoraError {
     ApiError(String),
     #[error("queue not found: `{0}`")]
     QueueNotFound(String),
+    #[error("generic error: `{0}`")]
+    GenericError(String),
 }

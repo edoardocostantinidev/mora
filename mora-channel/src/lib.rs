@@ -1,6 +1,6 @@
-use log::info;
 use mora_core::result::MoraError;
 use std::collections::HashMap;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct ChannelManager {
