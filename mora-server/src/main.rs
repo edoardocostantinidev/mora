@@ -3,17 +3,21 @@ use std::{sync::Arc, time::Duration};
 use crate::config::MoraConfig;
 use mora_api::MoraApi;
 use mora_channel::ChannelManager;
-use mora_core::result::{MoraError, MoraResult};
+use mora_core::result::MoraResult;
 use mora_queue::pool::QueuePool;
-use opentelemetry::trace::{Tracer, TracerProvider as _};
+use opentelemetry::global;
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{LogExporter, MetricExporter, Protocol, SpanExporter};
 use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::{logs::SdkLoggerProvider, metrics::SdkMeterProvider};
+use std::sync::OnceLock;
 use tokio::{sync::Mutex, task::JoinSet, time::sleep};
 use tracing::info;
-use tracing::{error, span};
-use tracing_loki::url;
+use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::Registry;
 
 pub mod config;
 
@@ -81,28 +85,76 @@ impl Server {
 async fn main() -> MoraResult<()> {
     let config = MoraConfig::build()?;
 
-    let provider = SdkTracerProvider::builder()
-        .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-        .build();
-    let tracer = provider.tracer("mora-server");
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let logger_provider = init_logs();
+    let otel_layer = OpenTelemetryTracingBridge::new(&logger_provider);
+    let filter_otel = EnvFilter::new(config.log_level().to_string());
+    let otel_layer = otel_layer.with_filter(filter_otel);
+    let filter_fmt = EnvFilter::new(config.log_level().to_string());
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_thread_names(true)
+        .with_target(false)
+        .with_line_number(false)
+        .with_file(false)
+        .compact()
+        .with_filter(filter_fmt);
 
-    let (layer, task) = tracing_loki::builder()
-        .label("app", "mora")
-        .map_err(|e| MoraError::GenericError(e.to_string()))?
-        .label("component", "server")
-        .map_err(|e| MoraError::GenericError(e.to_string()))?
-        .build_url(url::Url::parse("http://loki:3100").unwrap())
-        .map_err(|e| MoraError::GenericError(e.to_string()))?;
+    let tracer_provider = init_traces();
+    global::set_tracer_provider(tracer_provider);
+
+    let meter_provider = init_metrics();
+    global::set_meter_provider(meter_provider);
 
     tracing_subscriber::registry()
-        .with(layer)
-        .with(telemetry)
-        .with(tracing_subscriber::fmt::Layer::new())
+        .with(otel_layer)
+        .with(fmt_layer)
         .init();
-    tokio::spawn(async move {
-        task.await;
-    });
+
     let server = Server::new(config);
     server.run().await
+}
+
+fn get_resource() -> Resource {
+    static RESOURCE: OnceLock<Resource> = OnceLock::new();
+    RESOURCE
+        .get_or_init(|| Resource::builder().with_service_name("mora-server").build())
+        .clone()
+}
+
+fn init_logs() -> SdkLoggerProvider {
+    let exporter = LogExporter::builder()
+        .with_http()
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .expect("Failed to create log exporter");
+
+    SdkLoggerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(get_resource())
+        .build()
+}
+
+fn init_traces() -> SdkTracerProvider {
+    let exporter = SpanExporter::builder()
+        .with_http()
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .expect("Failed to create trace exporter");
+
+    SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(get_resource())
+        .build()
+}
+
+fn init_metrics() -> SdkMeterProvider {
+    let exporter = MetricExporter::builder()
+        .with_http()
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .expect("Failed to create metric exporter");
+
+    SdkMeterProvider::builder()
+        .with_periodic_exporter(exporter)
+        .with_resource(get_resource())
+        .build()
 }

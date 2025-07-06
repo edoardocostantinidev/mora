@@ -50,12 +50,12 @@ impl MoraConfig {
 
         let log_level = if let Ok(log_level_str) = std::env::var("MORA_LOG_LEVEL") {
             log_level_str.parse().unwrap_or_else(|_| {
-                warn!("{log_level_str} not a valid log level, reverting to default trace level)");
-                Level::TRACE
+                warn!("{log_level_str} not a valid log level, reverting to default info level)");
+                Level::INFO
             })
         } else {
-            info!("No log level provided, reverting to default trace level");
-            Level::TRACE
+            info!("No log level provided, reverting to default info level");
+            Level::INFO
         };
 
         Ok(Self {
@@ -76,6 +76,10 @@ impl MoraConfig {
 
     pub fn queue_pool_capacity(&self) -> usize {
         self.queue_pool_capacity
+    }
+
+    pub fn log_level(&self) -> Level {
+        self.log_level
     }
 }
 

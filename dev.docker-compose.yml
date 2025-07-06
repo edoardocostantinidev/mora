@@ -9,12 +9,12 @@ services:
       - "2626:2626"
     environment:
       - MORA_PORT=2626
-      - MORA_LOG_LEVEL=trace
+      - MORA_LOG_LEVEL=info
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_SERVICE_NAME=mora-server
       - OTEL_RESOURCE_ATTRIBUTES=service.name=mora-server,service.version=0.1.0
-      - RUST_LOG=trace
+      - RUST_LOG=info
     depends_on:
       - otel-collector
       - jaeger
@@ -98,14 +98,6 @@ services:
     container_name: loki
     ports:
       - "3100:3100"
-    networks:
-      - mora-network
-  # Redis for caching (optional, useful for complex applications)
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
     networks:
       - mora-network
     restart: unless-stopped
