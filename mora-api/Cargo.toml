@@ -9,11 +9,10 @@ edition = "2021"
 mora-core = { workspace = true }
 mora-channel = { workspace = true }
 mora-queue = { workspace = true }
-
+log = { workspace = true }
 axum = { workspace = true }
 axum-macros = { workspace = true }
 opentelemetry = { workspace = true }
-tracing = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }

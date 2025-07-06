@@ -13,7 +13,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_SERVICE_NAME=mora-server
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=mora-server,service.version=0.1.0
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=mora-server,service.version=0.1.0,environment=dev
       - RUST_LOG=info
     depends_on:
       - otel-collector
@@ -48,7 +48,6 @@ services:
     container_name: jaeger
     ports:
       - "16686:16686"  # Jaeger UI
-      - "14268:14268"  # Jaeger HTTP collector
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:

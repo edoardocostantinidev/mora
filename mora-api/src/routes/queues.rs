@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use tracing::{debug, error};
+use log::{debug, error};
 
 #[derive(serde::Serialize)]
 pub struct GetQueuesResponse {

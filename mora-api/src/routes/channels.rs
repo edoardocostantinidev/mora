@@ -5,7 +5,7 @@ use axum::{
 };
 use mora_core::clock::Clock;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info};
+use log::{debug, error, info};
 
 use crate::AppState;
 

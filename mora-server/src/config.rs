@@ -1,5 +1,5 @@
+use log::{info, warn, Level};
 use mora_core::result::MoraResult;
-use tracing::{info, warn, Level};
 
 const DEFAULT_PORT: u16 = 2626;
 const DEFAULT_CHANNEL_TIMEOUT_IN_MSEC: usize = 3600 * 1000;
@@ -51,11 +51,11 @@ impl MoraConfig {
         let log_level = if let Ok(log_level_str) = std::env::var("MORA_LOG_LEVEL") {
             log_level_str.parse().unwrap_or_else(|_| {
                 warn!("{log_level_str} not a valid log level, reverting to default info level)");
-                Level::INFO
+                Level::Info
             })
         } else {
             info!("No log level provided, reverting to default info level");
-            Level::INFO
+            Level::Info
         };
 
         Ok(Self {

@@ -7,19 +7,17 @@ default-run = "mora-server"
 
 [dependencies]
 config = "0.15.11"
+log = { workspace = true }
 mora-api = { workspace = true }
 mora-channel = { workspace = true }
 mora-core = { workspace = true }
 mora-queue = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
-opentelemetry-stdout = { workspace = true }
 opentelemetry-otlp = { workspace = true }
-opentelemetry-appender-tracing = { workspace = true }
+opentelemetry-resource-detectors = { workspace = true }
+opentelemetry-appender-log = { workspace = true }
 serde = { workspace = true }
 simple_logger = { workspace = true }
 tokio = { workspace = true }
-tracing = { workspace = true }
-tracing-loki = { workspace = true }
-tracing-opentelemetry = { workspace = true }
-tracing-subscriber = { workspace = true }
+uuid = { workspace = true }

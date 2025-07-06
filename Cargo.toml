@@ -19,28 +19,25 @@ mora-server = { path = "./mora-server" }
 mora-client = { path = "./mora-client" }
 mora-cli = { path = "./mora-cli" }
 
-axum = { version = "0.8.4" }
-axum-macros = { version = "0.5.0" }
 config = { version = "0.15.11" }
-opentelemetry = { version = "0.30.0" }
-opentelemetry_sdk = { version = "0.30.0" }
-opentelemetry-stdout = { version = "0.30.0" }
-opentelemetry-otlp = { version = "0.30.0" }
-opentelemetry-appender-tracing = { version = "0.30.0" }
+log = { version = "0.4", features = ["kv"] }
+axum = { version = "0.8" }
+axum-macros = { version = "0.5" }
+opentelemetry = "0.30"
+opentelemetry-appender-log = "0.30"
+opentelemetry-otlp = { version = "0.30", features = [
+    "grpc-tonic",
+    "trace",
+    "metrics",
+    "logs",
+] }
+opentelemetry-resource-detectors = "0.9"
+opentelemetry_sdk = { version = "0.30", features = ["rt-tokio"] }
 regex = { version = "1.11.1" }
 serde = { version = "1.0.219", features = ["derive"] }
 simple_logger = "5.0.0"
 tokio = { version = "1.46.1", features = ["full"] }
 thiserror = { version = "2.0.12" }
-tracing = { version = "0.1.41" }
-tracing-loki = { version = "0.2.6" }
-tracing-opentelemetry = { version = "0.31.0" }
-tracing-subscriber = { version = "0.3.19", features = [
-    "env-filter",
-    "registry",
-    "std",
-    "fmt",
-] }
 uuid = { version = "1.17.0", features = [
     "v4",
     "fast-rng",

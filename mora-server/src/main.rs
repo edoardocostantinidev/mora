@@ -1,25 +1,14 @@
-use std::{sync::Arc, time::Duration};
-
 use crate::config::MoraConfig;
+use log::info;
 use mora_api::MoraApi;
 use mora_channel::ChannelManager;
 use mora_core::result::MoraResult;
 use mora_queue::pool::QueuePool;
-use opentelemetry::global;
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_otlp::{LogExporter, MetricExporter, Protocol, SpanExporter};
-use opentelemetry_sdk::trace::SdkTracerProvider;
-use opentelemetry_sdk::Resource;
-use opentelemetry_sdk::{logs::SdkLoggerProvider, metrics::SdkMeterProvider};
-use std::sync::OnceLock;
+use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinSet, time::sleep};
-use tracing::info;
-use tracing_subscriber::filter::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::prelude::*;
 
 pub mod config;
+pub mod otel;
 
 #[derive(Debug)]
 pub struct Server {
@@ -84,77 +73,11 @@ impl Server {
 #[tokio::main]
 async fn main() -> MoraResult<()> {
     let config = MoraConfig::build()?;
-
-    let logger_provider = init_logs();
-    let otel_layer = OpenTelemetryTracingBridge::new(&logger_provider);
-    let filter_otel = EnvFilter::new(config.log_level().to_string());
-    let otel_layer = otel_layer.with_filter(filter_otel);
-    let filter_fmt = EnvFilter::new(config.log_level().to_string());
-    let fmt_layer = tracing_subscriber::fmt::layer()
-        .with_thread_names(true)
-        .with_target(false)
-        .with_line_number(false)
-        .with_file(false)
-        .compact()
-        .with_filter(filter_fmt);
-
-    let tracer_provider = init_traces();
-    global::set_tracer_provider(tracer_provider);
-
-    let meter_provider = init_metrics();
-    global::set_meter_provider(meter_provider);
-
-    tracing_subscriber::registry()
-        .with(otel_layer)
-        .with(fmt_layer)
-        .init();
-
+    info!("Config built");
+    info!("Starting OTEL");
+    otel::init_otel()?;
+    info!("OTEL initialized");
+    info!("Starting mora-server");
     let server = Server::new(config);
     server.run().await
-}
-
-fn get_resource() -> Resource {
-    static RESOURCE: OnceLock<Resource> = OnceLock::new();
-    RESOURCE
-        .get_or_init(|| Resource::builder().with_service_name("mora-server").build())
-        .clone()
-}
-
-fn init_logs() -> SdkLoggerProvider {
-    let exporter = LogExporter::builder()
-        .with_http()
-        .with_protocol(Protocol::HttpBinary)
-        .build()
-        .expect("Failed to create log exporter");
-
-    SdkLoggerProvider::builder()
-        .with_batch_exporter(exporter)
-        .with_resource(get_resource())
-        .build()
-}
-
-fn init_traces() -> SdkTracerProvider {
-    let exporter = SpanExporter::builder()
-        .with_http()
-        .with_protocol(Protocol::HttpBinary)
-        .build()
-        .expect("Failed to create trace exporter");
-
-    SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
-        .with_resource(get_resource())
-        .build()
-}
-
-fn init_metrics() -> SdkMeterProvider {
-    let exporter = MetricExporter::builder()
-        .with_http()
-        .with_protocol(Protocol::HttpBinary)
-        .build()
-        .expect("Failed to create metric exporter");
-
-    SdkMeterProvider::builder()
-        .with_periodic_exporter(exporter)
-        .with_resource(get_resource())
-        .build()
 }

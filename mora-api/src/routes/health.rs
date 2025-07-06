@@ -1,16 +1,18 @@
-use opentelemetry::global;
-use tracing::{info, instrument};
+use opentelemetry::{
+    global,
+    trace::{Span, Tracer},
+};
 
 /// Health Check to verify system integrity and functionality.
-#[instrument]
 pub(crate) async fn get() -> &'static str {
-    // example of using tracing to log a message
-    info!("performing health check");
-
-    // example of using opentelemetry to track metrics
+    //span example
+    let mut span = global::tracer("mora-api").start("health_check");
+    log::info!("Health check endpoint hit"); // log example
     let meter = global::meter("mora-api");
-    let counter = meter.u64_counter("health_check_performed").build();
-    counter.add(1, &[]);
+    let health_check_endpoint_hits = meter.u64_counter("health_check_endpoint_hits").build();
+    health_check_endpoint_hits.add(1, &[]); // metric example
+    span.set_status(opentelemetry::trace::Status::Ok);
+    span.end();
 
     "200 OK"
 }

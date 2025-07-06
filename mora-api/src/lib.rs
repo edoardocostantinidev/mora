@@ -3,12 +3,12 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
+use log::info;
 use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::info;
 
 pub(crate) mod routes;
 
