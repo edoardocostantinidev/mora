@@ -6,3 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mora-core = { workspace = true }
+
+color-eyre = { workspace = true }
+crossterm = { workspace = true, features = ["event-stream"] }
+ratatui = { workspace = true, features = ["all-widgets"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio-stream.workspace = true

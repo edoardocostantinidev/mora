@@ -6,7 +6,7 @@ default-run = "mora-server"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-config = "0.15.11"
+config = "0.15.16"
 log = { workspace = true }
 mora-api = { workspace = true }
 mora-channel = { workspace = true }
