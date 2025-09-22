@@ -1,12 +1,11 @@
 use std::sync::{Arc, RwLock};
-use std::vec;
 
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, HighlightSpacing, Row, StatefulWidget, Table, TableState, Widget};
+use ratatui::widgets::{Block, StatefulWidget, TableState, Widget};
 
 #[derive(Debug, Clone, Default)]
 pub struct ServerStatusWidget {
