@@ -1,14 +1,13 @@
-use std::default;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use mora_core::entities::cluster_status::{ClusterStatus, ClusterStatusData};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{self, Constraint, Direction, Layout, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListDirection, Paragraph, Widget};
+use ratatui::widgets::{Block, Borders, List, ListDirection, Widget};
 
 use mora_client::MoraClient;
 

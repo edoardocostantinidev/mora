@@ -1,19 +1,18 @@
-use std::default;
+use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use mora_core::entities::cluster_status::{ClusterStatus, ClusterStatusData};
+use color_eyre::owo_colors::OwoColorize;
 use mora_core::entities::connections_info::ConnectionsInfo;
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{self, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::text::{Line, Span};
+use ratatui::layout::{Alignment, Constraint, Rect};
+use ratatui::style::{Color, Modifier, Style, Stylize};
+use ratatui::symbols;
+use ratatui::text::Line;
 use ratatui::widgets::{
-    Axis, Block, Borders, Chart, Dataset, GraphType, LegendPosition, List, ListDirection,
-    Paragraph, Widget,
+    Axis, Block, Chart, Dataset, GraphType, LegendPosition, List, ListDirection, Widget,
 };
-use ratatui::{symbols, Frame};
 
 use mora_client::MoraClient;
 
@@ -34,10 +33,12 @@ impl ConnectionPanelWidget {
     }
 }
 
+type ConnectionsBySecond = VecDeque<(u64, i64)>; // (connections, timestamp)
+
 #[derive(Debug, Default)]
 struct ConnectionsInfoState {
     loading_state: LoadingState,
-    connections_by_second: Vec<(u64, i64)>,
+    connections_by_second: ConnectionsBySecond,
     already_fetched_once: bool,
 }
 
@@ -46,17 +47,18 @@ enum LoadingState {
     #[default]
     Idle,
     Loading,
-    Loaded(ConnectionsInfo),
+    Loaded(ConnectionsBySecond),
     Error(String),
 }
 
+const MAX_POINTS_IN_CHART: usize = 50;
 impl ConnectionPanelWidget {
     pub fn run(&self) {
         let this = self.clone();
         tokio::spawn(async move {
             loop {
                 this.fetch_status().await;
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
     }
@@ -64,14 +66,11 @@ impl ConnectionPanelWidget {
     async fn fetch_status(&self) {
         if !self.state.read().unwrap().already_fetched_once {
             self.set_loading_state(LoadingState::Loading);
-            tokio::time::sleep(Duration::from_secs(1)).await;
         }
 
-        self.state.write().unwrap().already_fetched_once = true;
-
-        let random_between_100_and_500 = rand::random::<u64>() % 400 + 100;
+        let random_num = rand::random::<u64>() % 400 + 100;
         self.on_load(ConnectionsInfo {
-            clients_connected: random_between_100_and_500,
+            clients_connected: random_num,
         });
     }
 
@@ -81,13 +80,15 @@ impl ConnectionPanelWidget {
             .expect("are we seriously in year 2262?");
         let mut state = self.state.write().unwrap();
 
-        if state.connections_by_second.len() >= 500 {
-            state.connections_by_second.remove(0);
+        if state.connections_by_second.len() >= MAX_POINTS_IN_CHART {
+            state.connections_by_second.pop_front();
         }
 
+        state.already_fetched_once = true;
         state
             .connections_by_second
-            .push((connections_info.clients_connected, time));
+            .push_back((connections_info.clients_connected, time));
+        state.loading_state = LoadingState::Loaded(state.connections_by_second.clone());
     }
 
     fn on_err(&self, err: &MoraError) {
@@ -137,12 +138,8 @@ impl Widget for &ConnectionPanelWidget {
 
                 list.render(area, buf);
             }
-            LoadingState::Loaded(_) => {
-                connections_info_chart(
-                    area,
-                    buf,
-                    self.state.read().unwrap().connections_by_second.clone(),
-                );
+            LoadingState::Loaded(connections_info) => {
+                connections_info_chart(area, buf, connections_info);
             }
         }
 
@@ -151,36 +148,67 @@ impl Widget for &ConnectionPanelWidget {
     }
 }
 
-fn connections_info_chart(area: Rect, buf: &mut Buffer, connections_by_second: Vec<(u64, i64)>) {
+fn connections_info_chart(
+    area: Rect,
+    buf: &mut Buffer,
+    connections_by_second: &ConnectionsBySecond,
+) {
+    let mut max_connections = 0.0;
+
     let data = connections_by_second
         .iter()
-        .map(|(x, y)| (*x as f64, *y as f64))
+        .map(|(connections, timestamp)| (*connections as f64, *timestamp as f64))
         .collect::<Vec<(f64, f64)>>();
 
+    data.iter().for_each(|(x, _)| {
+        if *x > max_connections {
+            max_connections = *x;
+        }
+    });
+
+    let min_time = data.first().map(|(_, t)| *t as f64).unwrap_or(0.0);
+    let max_time = data.last().map(|(_, t)| *t as f64).unwrap_or(0.0);
+    let max_connections_label = format!("{:.0}", max_connections * 1.25);
+
+    let adjusted_data = data
+        .iter()
+        .map(|(x, y)| (*x, (*y - min_time) / 1e9))
+        .collect::<Vec<(f64, f64)>>();
+
+    let adjusted_min_time = adjusted_data.first().map(|(_, t)| *t).unwrap_or(0.0);
+    let adjusted_max_time = adjusted_data.last().map(|(_, t)| *t).unwrap_or(0.0);
+    let min_time_label = chrono::DateTime::from_timestamp_nanos(min_time as i64)
+        .format("%H:%M:%S")
+        .to_string();
+    let max_time_label = chrono::DateTime::from_timestamp_nanos(max_time as i64)
+        .format("%H:%M:%S")
+        .to_string();
+
     let datasets = vec![Dataset::default()
-        .name("Line from only 2 points".italic())
         .marker(symbols::Marker::Braille)
-        .style(Style::default().fg(Color::Yellow))
+        .style(Style::default().fg(Color::Magenta))
         .graph_type(GraphType::Line)
-        .data(&data)];
+        .data(&adjusted_data)];
 
     let chart = Chart::new(datasets)
-        .block(Block::bordered().title(Line::from("Line chart").cyan().bold().centered()))
+        .block(Block::bordered())
         .x_axis(
             Axis::default()
-                .title("X Axis")
-                .style(Style::default().gray())
-                .bounds([0.0, 5.0])
-                .labels(["0".bold(), "2.5".into(), "5.0".bold()]),
+                .style(Style::default().hidden())
+                .bounds([
+                    adjusted_min_time - (adjusted_min_time * 0.05),
+                    adjusted_max_time,
+                ])
+                .labels([min_time_label, max_time_label])
+                .labels_alignment(Alignment::Center),
         )
         .y_axis(
             Axis::default()
-                .title("Y Axis")
-                .style(Style::default().gray())
-                .bounds([0.0, 5.0])
-                .labels(["0".bold(), "2.5".into(), "5.0".bold()]),
+                .style(Style::default().hidden())
+                .bounds([0.0, max_connections * 1.25])
+                .labels(["0".to_string(), max_connections_label])
+                .labels_alignment(Alignment::Center),
         )
-        .legend_position(Some(LegendPosition::TopLeft))
-        .hidden_legend_constraints((Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)));
+        .legend_position(None);
     chart.render(area, buf);
 }
