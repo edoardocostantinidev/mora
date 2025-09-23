@@ -1,12 +1,15 @@
 use std::time::Duration;
 
+use crate::widgets::connection_panel::ConnectionPanelWidget;
 use crate::widgets::server_status::ServerStatusWidget;
+use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
 use crossterm::event::{Event, EventStream, KeyCode};
 use mora_client::MoraClient;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Stylize;
 use ratatui::text::Line;
+use ratatui::widgets::{Block, Widget};
 use ratatui::{DefaultTerminal, Frame};
 use tokio_stream::StreamExt;
 
@@ -14,6 +17,7 @@ use tokio_stream::StreamExt;
 pub struct App {
     should_quit: bool,
     server_status: ServerStatusWidget,
+    connection_panel: ConnectionPanelWidget,
 }
 
 impl App {
@@ -23,11 +27,13 @@ impl App {
         Self {
             should_quit: false,
             server_status: ServerStatusWidget::new(mora_client),
+            connection_panel: ConnectionPanelWidget::new(mora_client),
         }
     }
 
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         self.server_status.run();
+        self.connection_panel.run();
 
         let period = Duration::from_secs_f32(1.0 / Self::FRAMES_PER_SECOND);
         let mut interval = tokio::time::interval(period);
@@ -43,12 +49,31 @@ impl App {
     }
 
     fn render(&self, frame: &mut Frame) {
-        let layout = Layout::vertical([Constraint::Length(1), Constraint::Fill(1)]);
         let body_area = frame.area();
-        let title_area = layout.split(body_area)[0];
-        let title = Line::from("Mora Control Panel").centered().bold();
-        frame.render_widget(title, title_area);
-        frame.render_widget(&self.server_status, body_area);
+        let block = Block::bordered()
+            .title("Mora Control Panel")
+            .title_bottom("q to quit");
+
+        let outer_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(100)])
+            .split(body_area);
+
+        let main_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(85), Constraint::Percentage(15)])
+            .margin(1)
+            .split(outer_layout[0]);
+
+        let lower_bar = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .spacing(1)
+            .split(main_layout[1]);
+
+        frame.render_widget(block, outer_layout[0]);
+        frame.render_widget(&self.server_status, lower_bar[0]);
+        frame.render_widget(&self.connection_panel, lower_bar[1]);
     }
 
     fn handle_event(&mut self, event: &Event) {

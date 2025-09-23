@@ -38,6 +38,12 @@ command = "cargo"
 args = ["run"]
 watch = true
 
+[tasks.wcli]
+workspace = false
+cwd = "mora-cli"
+command = "cargo"
+args = ["run"]
+watch = true
 
 [tasks.api-tests]
 cwd = "k6"

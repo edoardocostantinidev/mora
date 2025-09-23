@@ -22,7 +22,7 @@ impl MoraClient {
         }
     }
 
-    fn build_url(&self, path: &str) -> MoraResult<Url> {
+    pub fn build_url(&self, path: &str) -> MoraResult<Url> {
         Url::parse(
             format!(
                 "http://{base_url}:{port}/{path}",
@@ -58,6 +58,10 @@ impl MoraClient {
 }
 
 fn handle_request_error(error: reqwest::Error) -> MoraError {
+    if error.is_connect() {
+        return MoraError::ConnectionError("failed to connect to server".to_string());
+    }
+
     MoraError::GenericError(format!("error making request: {error}"))
 }
 

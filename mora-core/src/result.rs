@@ -16,4 +16,6 @@ pub enum MoraError {
     QueueNotFound(String),
     #[error("generic error: `{0}`")]
     GenericError(String),
+    #[error("connection error: `{0}`")]
+    ConnectionError(String),
 }

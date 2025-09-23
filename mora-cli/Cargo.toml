@@ -13,5 +13,6 @@ chrono = { workspace = true }
 color-eyre = { workspace = true }
 crossterm = { workspace = true, features = ["event-stream"] }
 ratatui = { workspace = true, features = ["all-widgets"] }
+rand = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tokio-stream.workspace = true
