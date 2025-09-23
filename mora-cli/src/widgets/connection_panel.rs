@@ -172,11 +172,14 @@ fn connections_info_chart(
 
     let adjusted_data = data
         .iter()
-        .map(|(x, y)| (*x, (*y - min_time) / 1e9))
+        .map(|(x, y)| (*x, ((*y) / 1e9).round()))
         .collect::<Vec<(f64, f64)>>();
 
-    let adjusted_min_time = adjusted_data.first().map(|(_, t)| *t).unwrap_or(0.0);
-    let adjusted_max_time = adjusted_data.last().map(|(_, t)| *t).unwrap_or(0.0);
+    let bound_min_time = adjusted_data.first().map(|(_, t)| *t).unwrap_or(0.0) - 400.0;
+    let bound_max_time = adjusted_data.last().map(|(_, t)| *t).unwrap_or(0.0) + 100.0;
+    let bound_min_connections = 0.0;
+    let bound_max_connections = 1000.0;
+
     let min_time_label = chrono::DateTime::from_timestamp_nanos(min_time as i64)
         .format("%H:%M:%S")
         .to_string();
@@ -195,20 +198,36 @@ fn connections_info_chart(
         .x_axis(
             Axis::default()
                 .style(Style::default().hidden())
-                .bounds([
-                    adjusted_min_time - (adjusted_min_time * 0.05),
-                    adjusted_max_time,
-                ])
+                .bounds([bound_min_time, bound_max_time])
                 .labels([min_time_label, max_time_label])
                 .labels_alignment(Alignment::Center),
         )
         .y_axis(
             Axis::default()
                 .style(Style::default().hidden())
-                .bounds([0.0, max_connections * 1.25])
+                .bounds([bound_min_connections, bound_max_connections])
                 .labels(["0".to_string(), max_connections_label])
                 .labels_alignment(Alignment::Center),
         )
         .legend_position(None);
-    chart.render(area, buf);
+
+    let items = adjusted_data
+        .iter()
+        .map(|(x, y)| {
+            format!(
+                "Bounds X({},{}) Bounds y({},{}) Connections: {:.0} at {:.0}",
+                bound_min_connections, bound_max_connections, bound_min_time, bound_max_time, x, y
+            )
+        })
+        .collect::<Vec<String>>();
+    let list = List::new(items)
+        .block(Block::bordered().title("List"))
+        .style(Style::new().white())
+        .highlight_style(Style::new().italic())
+        .highlight_symbol(">>")
+        .repeat_highlight_symbol(true)
+        .direction(ListDirection::TopToBottom);
+
+    list.render(area, buf);
+    //chart.render(area, buf);
 }
