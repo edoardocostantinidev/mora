@@ -76,8 +76,11 @@ fn init_logger_provider() {
         .build()
         .expect("Failed to build logger provider");
 
+    let stdout_exporter = opentelemetry_stdout::LogExporter::default();
+
     let logger_provider = opentelemetry_sdk::logs::SdkLoggerProvider::builder()
         .with_batch_exporter(logger_exporter)
+        .with_batch_exporter(stdout_exporter)
         .with_resource(get_resource())
         .build();
 

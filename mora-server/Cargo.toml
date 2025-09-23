@@ -17,6 +17,7 @@ opentelemetry_sdk = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry-resource-detectors = { workspace = true }
 opentelemetry-appender-log = { workspace = true }
+opentelemetry-stdout = { workspace = true }
 serde = { workspace = true }
 simple_logger = { workspace = true }
 tokio = { workspace = true }

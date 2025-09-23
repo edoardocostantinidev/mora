@@ -7,7 +7,9 @@ edition = "2021"
 
 [dependencies]
 mora-core = { workspace = true }
+mora-client = { workspace = true }
 
+chrono = { workspace = true }
 color-eyre = { workspace = true }
 crossterm = { workspace = true, features = ["event-stream"] }
 ratatui = { workspace = true, features = ["all-widgets"] }

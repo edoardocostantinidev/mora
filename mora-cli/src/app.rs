@@ -3,13 +3,14 @@ use std::time::Duration;
 use crate::widgets::server_status::ServerStatusWidget;
 use color_eyre::Result;
 use crossterm::event::{Event, EventStream, KeyCode};
+use mora_client::MoraClient;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::Stylize;
 use ratatui::text::Line;
 use ratatui::{DefaultTerminal, Frame};
 use tokio_stream::StreamExt;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct App {
     should_quit: bool,
     server_status: ServerStatusWidget,
@@ -17,6 +18,13 @@ pub struct App {
 
 impl App {
     const FRAMES_PER_SECOND: f32 = 60.0;
+
+    pub fn new(mora_client: &MoraClient) -> Self {
+        Self {
+            should_quit: false,
+            server_status: ServerStatusWidget::new(mora_client),
+        }
+    }
 
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         self.server_status.run();

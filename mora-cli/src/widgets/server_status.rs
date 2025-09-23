@@ -1,65 +1,82 @@
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
+use mora_core::entities::cluster_status::{ClusterStatus, ClusterStatusData};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, StatefulWidget, TableState, Widget};
+use ratatui::widgets::{Block, List, ListDirection, Widget};
 
-#[derive(Debug, Clone, Default)]
+use mora_client::MoraClient;
+
+#[derive(Debug, Clone)]
 pub struct ServerStatusWidget {
+    mora_client: MoraClient,
     state: Arc<RwLock<ServerStatusListState>>,
+}
+
+impl ServerStatusWidget {
+    pub fn new(mora_client: &MoraClient) -> Self {
+        Self {
+            mora_client: mora_client.clone(),
+            state: Arc::new(RwLock::new(ServerStatusListState::default())),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 struct ServerStatusListState {
     loading_state: LoadingState,
-    table_state: TableState,
+    cluster_status: ClusterStatus,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 enum LoadingState {
     #[default]
     Idle,
     Loading,
-    Loaded,
+    Loaded(ClusterStatusData),
     Error(String),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ServerStatus {
-    Online,
-    Degraded,
-    Offline,
 }
 
 impl ServerStatusWidget {
     pub fn run(&self) {
         let this = self.clone();
         tokio::spawn(async move {
-            this.fetch_status().await;
+            loop {
+                this.fetch_status().await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
         });
     }
 
-    async fn fetch_status(self) {
+    async fn fetch_status(&self) {
         self.set_loading_state(LoadingState::Loading);
-        // simulate a network request
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        self.on_load(&ServerStatus::Online);
+        let cluster_status_result = self.mora_client.clone().get_cluster_status().await;
+        match cluster_status_result {
+            Ok(cluster_status) => {
+                self.on_load(cluster_status);
+            }
+            Err(error) => {
+                self.on_err(&error);
+            }
+        }
     }
 
-    fn on_load(&self, status: &ServerStatus) {
+    fn on_load(&self, status: ClusterStatus) {
         let mut state = self.state.write().unwrap();
+        state.cluster_status = status.clone();
         match status {
-            ServerStatus::Online => {
-                state.loading_state = LoadingState::Loaded;
+            ClusterStatus::Online(data) => {
+                state.loading_state = LoadingState::Loaded(data);
             }
-            ServerStatus::Degraded => {
-                state.loading_state = LoadingState::Error(format!("{:?}", ServerStatus::Degraded));
+            ClusterStatus::Degraded(error) => {
+                state.loading_state = LoadingState::Error(format!("Degraded: {:?}", error));
             }
-            ServerStatus::Offline => {
-                state.loading_state = LoadingState::Error(format!("{:?}", ServerStatus::Offline));
+            ClusterStatus::Offline => {
+                state.loading_state = LoadingState::Error(format!("{:?}", ClusterStatus::Offline));
             }
         }
     }
@@ -80,7 +97,7 @@ impl Widget for &ServerStatusWidget {
         let block = Block::bordered()
             .title("Mora Control Panel")
             .title(loading_state)
-            .title_bottom("j/k to scroll, q to quit");
+            .title_bottom("q to quit");
 
         match &state.loading_state {
             LoadingState::Idle | LoadingState::Loading => {
@@ -94,24 +111,46 @@ impl Widget for &ServerStatusWidget {
                 );
             }
             LoadingState::Error(err) => {
-                let error = Line::from(format!("Error: {err}")).centered();
-                block.render(area, buf);
-                buf.set_string(
-                    area.x + area.width / 2 - error.width() as u16 / 2,
-                    area.y + area.height / 2,
-                    err.to_string(),
-                    Style::default().fg(ratatui::style::Color::Red),
-                );
+                let items = [format!("Error: {err}")];
+                let list = List::new(items)
+                    .block(Block::bordered().title("List"))
+                    .style(Style::new().white())
+                    .highlight_style(Style::new().italic())
+                    .highlight_symbol(">>")
+                    .repeat_highlight_symbol(true)
+                    .direction(ListDirection::BottomToTop);
+
+                list.render(area, buf);
             }
-            LoadingState::Loaded => {
-                let loading = Line::from("Loading...").centered();
-                block.render(area, buf);
-                buf.set_string(
-                    area.x + area.width / 2 - loading.width() as u16 / 2,
-                    area.y + area.height / 2,
-                    "loaded!".to_string(),
-                    Style::default().fg(ratatui::style::Color::Yellow),
-                );
+            LoadingState::Loaded(ClusterStatusData {
+                version,
+                current_time_in_ns,
+            }) => {
+                // Convert u128 to i64 safely, saturating at i64::MAX if necessary
+                let current_time_in_ns_i64 = if *current_time_in_ns > i64::MAX as u128 {
+                    i64::MAX
+                } else {
+                    *current_time_in_ns as i64
+                };
+                let current_time = chrono::DateTime::from_timestamp_nanos(current_time_in_ns_i64);
+
+                let items = [
+                    format!("Version: {version}"),
+                    format!(
+                        "Current Server Time: {}, ({} ns)",
+                        current_time.to_string(),
+                        current_time_in_ns
+                    ),
+                ];
+                let list = List::new(items)
+                    .block(Block::bordered().title("List"))
+                    .style(Style::new().white())
+                    .highlight_style(Style::new().italic())
+                    .highlight_symbol(">>")
+                    .repeat_highlight_symbol(true)
+                    .direction(ListDirection::BottomToTop);
+
+                list.render(area, buf);
             }
         }
 
