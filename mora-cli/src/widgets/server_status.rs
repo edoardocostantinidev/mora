@@ -9,12 +9,15 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListDirection, Widget};
 
+use crate::selectable::Selectable;
+
 use mora_client::MoraClient;
 
 #[derive(Debug, Clone)]
 pub struct ServerStatusWidget {
     mora_client: MoraClient,
     state: Arc<RwLock<ServerStatusState>>,
+    selected: bool,
 }
 
 impl ServerStatusWidget {
@@ -29,7 +32,18 @@ impl ServerStatusWidget {
         Self {
             mora_client: mora_client.clone(),
             state: Arc::new(RwLock::new(initial_state)),
+            selected: false,
         }
+    }
+}
+
+impl Selectable for ServerStatusWidget {
+    fn is_selected(&self) -> bool {
+        self.selected
+    }
+
+    fn set_selected(&mut self, selected: bool) {
+        self.selected = selected;
     }
 }
 
@@ -124,7 +138,7 @@ impl Widget for &ServerStatusWidget {
         };
         let block = Block::bordered()
             .border_style(Style::default().fg(color))
-            .title("Server Status Panel");
+            .title("Server Status");
 
         match &state.loading_state {
             LoadingState::Idle | LoadingState::Loading => {

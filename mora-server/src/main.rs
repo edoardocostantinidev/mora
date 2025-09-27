@@ -55,10 +55,7 @@ impl Server {
                     .map(|c| c.id().to_owned())
                     .collect();
                 if !channels_to_delete.is_empty() {
-                    info!(
-                        "Will close {} active channels due to inactivity.",
-                        channels_to_delete.len()
-                    )
+                    info!("Will close {} inactive channels.", channels_to_delete.len())
                 }
                 for channel_id in channels_to_delete {
                     binding.close_channel(&channel_id.to_owned());

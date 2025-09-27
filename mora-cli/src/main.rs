@@ -4,6 +4,7 @@ use color_eyre::eyre::Error;
 use mora_core::result::{MoraError, MoraResult};
 
 pub(crate) mod app;
+pub(crate) mod selectable;
 pub(crate) mod widgets;
 
 #[tokio::main]

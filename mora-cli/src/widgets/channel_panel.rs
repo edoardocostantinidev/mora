@@ -10,18 +10,18 @@ use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols;
 use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget};
 
-use mora_client::MoraClient;
-
 use crate::selectable::Selectable;
 
+use mora_client::MoraClient;
+
 #[derive(Debug, Clone)]
-pub struct ConnectionPanelWidget {
+pub struct ChannelPanelWidget {
     mora_client: MoraClient,
     state: Arc<RwLock<ConnectionsInfoState>>,
     selected: bool,
 }
 
-impl ConnectionPanelWidget {
+impl ChannelPanelWidget {
     pub fn new(mora_client: &MoraClient) -> Self {
         let initial_state = ConnectionsInfoState::default();
 
@@ -33,7 +33,7 @@ impl ConnectionPanelWidget {
     }
 }
 
-impl Selectable for ConnectionPanelWidget {
+impl Selectable for ChannelPanelWidget {
     fn is_selected(&self) -> bool {
         self.selected
     }
@@ -64,7 +64,7 @@ enum LoadingState {
 const MAX_POINTS_IN_CHART: usize = 160;
 const REFRESH_INTERVAL_IN_MSEC: u64 = 32; // 30 fps
 
-impl ConnectionPanelWidget {
+impl ChannelPanelWidget {
     pub fn run(&self) {
         let this = self.clone();
         tokio::spawn(async move {
@@ -118,7 +118,7 @@ impl ConnectionPanelWidget {
     }
 }
 
-impl Widget for &ConnectionPanelWidget {
+impl Widget for &ChannelPanelWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let state = self.state.write().unwrap();
         let color = ratatui::style::Color::LightMagenta;

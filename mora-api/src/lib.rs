@@ -8,7 +8,7 @@ use log::info;
 use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 use crate::{connections::Connections, middlewares::connections::ConnectionMiddleware};
@@ -45,8 +45,16 @@ impl MoraApi {
         let app_state = AppState {
             channel_manager,
             queue_pool,
-            connections,
+            connections: connections.clone(),
         };
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(1));
+            loop {
+                interval.tick().await;
+                connections.clone().lock().await.purge_old_connections();
+            }
+        });
 
         let app = Router::new()
             .route("/health", get(routes::health::get))

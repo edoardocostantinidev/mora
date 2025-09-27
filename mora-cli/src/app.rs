@@ -1,6 +1,9 @@
 use std::time::Duration;
 
+use crate::selectable::Selectable;
+use crate::widgets::channel_panel::ChannelPanelWidget;
 use crate::widgets::connection_panel::ConnectionPanelWidget;
+use crate::widgets::queue_panel::QueuePanelWidget;
 use crate::widgets::server_status::ServerStatusWidget;
 use color_eyre::Result;
 use crossterm::event::{Event, EventStream, KeyCode};
@@ -15,6 +18,16 @@ pub struct App {
     should_quit: bool,
     server_status: ServerStatusWidget,
     connection_panel: ConnectionPanelWidget,
+    channel_panel: ChannelPanelWidget,
+    queue_panel: QueuePanelWidget,
+    selected_panel: SelectedPanel,
+}
+
+#[derive(Debug)]
+enum SelectedPanel {
+    Queue,
+    Channel,
+    Connection,
 }
 
 impl App {
@@ -25,6 +38,9 @@ impl App {
             should_quit: false,
             server_status: ServerStatusWidget::new(mora_client),
             connection_panel: ConnectionPanelWidget::new(mora_client),
+            channel_panel: ChannelPanelWidget::new(mora_client),
+            queue_panel: QueuePanelWidget::new(mora_client),
+            selected_panel: SelectedPanel::Queue,
         }
     }
 
@@ -48,7 +64,7 @@ impl App {
     fn render(&self, frame: &mut Frame) {
         let body_area = frame.area();
         let block = Block::bordered()
-            .title("Mora Control Panel")
+            .title("Mora Dashboard")
             .title_bottom("q to quit");
 
         let outer_layout = Layout::default()
@@ -66,6 +82,15 @@ impl App {
             .margin(1)
             .split(outer_layout[0]);
 
+        let central_layout_percentage = 50;
+        let central_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![
+                Constraint::Percentage(central_layout_percentage),
+                Constraint::Percentage(100 - central_layout_percentage),
+            ])
+            .split(main_layout[0]);
+
         let lower_bar = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -74,12 +99,34 @@ impl App {
         frame.render_widget(block, outer_layout[0]);
         frame.render_widget(&self.server_status, lower_bar[0]);
         frame.render_widget(&self.connection_panel, lower_bar[1]);
+        frame.render_widget(&self.queue_panel, central_layout[0]);
+        frame.render_widget(&self.channel_panel, central_layout[1]);
     }
 
     fn handle_event(&mut self, event: &Event) {
         if let Some(key) = event.as_key_press_event() {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
+                KeyCode::Tab => {
+                    self.selected_panel = match self.selected_panel {
+                        //tab moves panel
+                        SelectedPanel::Queue => {
+                            self.queue_panel.set_selected(false);
+                            self.channel_panel.set_selected(true);
+                            SelectedPanel::Channel
+                        }
+                        SelectedPanel::Channel => {
+                            self.channel_panel.set_selected(false);
+                            self.connection_panel.set_selected(true);
+                            SelectedPanel::Connection
+                        }
+                        SelectedPanel::Connection => {
+                            self.connection_panel.set_selected(false);
+                            self.queue_panel.set_selected(true);
+                            SelectedPanel::Queue
+                        }
+                    }
+                }
                 _ => {}
             }
         }
