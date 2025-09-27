@@ -73,7 +73,7 @@ impl App {
 
         frame.render_widget(block, outer_layout[0]);
         frame.render_widget(&self.server_status, lower_bar[0]);
-        frame.render_widget(&self.connection_panel, main_layout[0]);
+        frame.render_widget(&self.connection_panel, lower_bar[1]);
     }
 
     fn handle_event(&mut self, event: &Event) {

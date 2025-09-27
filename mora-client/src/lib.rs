@@ -1,5 +1,5 @@
 use mora_core::{
-    entities::cluster_status::ClusterStatus,
+    entities::{cluster_status::ClusterStatus, connections_info::ConnectionsInfo},
     result::{MoraError, MoraResult},
 };
 
@@ -55,11 +55,37 @@ impl MoraClient {
             _ => Ok(ClusterStatus::Offline),
         }
     }
+
+    pub async fn get_connections_info(&self) -> MoraResult<ConnectionsInfo> {
+        let url = self.build_url("connections")?;
+        let response = self
+            .http_client
+            .clone()
+            .get(url)
+            .send()
+            .await
+            .map_err(handle_request_error)?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let raw_body = response.text().await.map_err(handle_request_error)?;
+                let status = serde_json::from_str::<ConnectionsInfo>(&raw_body)
+                    .map_err(|err| handle_decode_error(err, &raw_body))?;
+                Ok(status)
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => Err(MoraError::GenericError(
+                "failed to get connections info: internal server error".to_string(),
+            )),
+            _ => Err(MoraError::GenericError(
+                "failed to get connections info: unknown error".to_string(),
+            )),
+        }
+    }
 }
 
 fn handle_request_error(error: reqwest::Error) -> MoraError {
     if error.is_connect() {
-        return MoraError::ConnectionError("failed to connect to server".to_string());
+        return MoraError::ConnectionError(format!("failed to connect to server: {error}"));
     }
 
     MoraError::GenericError(format!("error making request: {error}"))
