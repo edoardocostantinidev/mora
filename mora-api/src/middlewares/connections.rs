@@ -1,9 +1,8 @@
-use std::{convert::Infallible, net::SocketAddr};
+use std::net::SocketAddr;
 
 use axum::{
     extract::{ConnectInfo, FromRef},
     http::request::Parts,
-    Error, RequestPartsExt,
 };
 
 use crate::AppState;

@@ -6,12 +6,11 @@ use color_eyre::owo_colors::OwoColorize;
 use mora_core::entities::connections_info::ConnectionsInfo;
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Constraint, Rect};
-use ratatui::style::{Color, Modifier, Style, Stylize};
+use ratatui::layout::{Alignment, Rect};
+use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols;
-use ratatui::text::Line;
 use ratatui::widgets::{
-    Axis, Block, Chart, Dataset, GraphType, LegendPosition, List, ListDirection, Widget,
+    Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget,
 };
 
 use mora_client::MoraClient;

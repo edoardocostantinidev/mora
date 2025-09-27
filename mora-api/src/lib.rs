@@ -1,5 +1,4 @@
 use axum::{
-    extract::ConnectInfo,
     http::StatusCode,
     middleware,
     routing::{delete, get, post},
@@ -7,10 +6,7 @@ use axum::{
 };
 use log::info;
 use mora_channel::ChannelManager;
-use mora_core::{
-    entities::connections_info::ConnectionsInfo,
-    result::{MoraError, MoraResult},
-};
+use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;

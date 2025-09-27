@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-use axum::{extract::State, http::StatusCode, Json};
-use mora_core::entities::connections_info::ConnectionsInfo;
 use serde::Serialize;
 
-use crate::AppState;
 
 pub type ConnectionId = String;
 

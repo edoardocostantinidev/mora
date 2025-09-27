@@ -3,7 +3,7 @@ use mora_core::{
     result::{MoraError, MoraResult},
 };
 
-use reqwest::{RequestBuilder, Response, StatusCode, Url};
+use reqwest::Url;
 use url::ParseError;
 
 const MORA_ID_KEY_HEADER: &str = "MORA-ID-KEY";
