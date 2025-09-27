@@ -10,7 +10,8 @@ pub(crate) mod widgets;
 async fn main() -> MoraResult<()> {
     let base_url = env::var("MORA_BASE_URL").unwrap_or("localhost".to_string());
     let port = env::var("MORA_PORT").unwrap_or("2626".to_string());
-    let mora_client = mora_client::MoraClient::new(base_url, port.parse::<u16>().unwrap());
+    let id_key = env::var("MORA_ID_KEY").unwrap_or("test".to_string());
+    let mora_client = mora_client::MoraClient::new(base_url, port.parse::<u16>().unwrap(), id_key);
 
     color_eyre::install().map_err(handle_error)?;
     let terminal = ratatui::init();

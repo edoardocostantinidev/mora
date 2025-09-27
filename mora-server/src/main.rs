@@ -4,6 +4,7 @@ use mora_api::MoraApi;
 use mora_channel::ChannelManager;
 use mora_core::result::MoraResult;
 use mora_queue::pool::QueuePool;
+
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinSet, time::sleep};
 
@@ -26,9 +27,11 @@ impl Server {
         let queue_pool = Arc::new(Mutex::new(QueuePool::new(
             self.config.queue_pool_capacity(),
         )));
+
         let api = MoraApi::new(self.config.port());
         let channel_manager_for_api = channel_manager.clone();
         let queue_pool_for_api = queue_pool.clone();
+
         tasks.spawn(async move {
             api.start_listening(channel_manager_for_api, queue_pool_for_api)
                 .await

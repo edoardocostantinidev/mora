@@ -87,10 +87,10 @@ fn init_logger_provider() {
     let otel_log_appender = OpenTelemetryLogBridge::new(&logger_provider);
     log::set_boxed_logger(Box::new(otel_log_appender)).unwrap();
 
-    let max_level = env::var("LOG_LEVEL")
+    let max_level = env::var("MORA_LOG_LEVEL")
         .ok()
         .and_then(|l| Level::from_str(l.to_lowercase().as_str()).ok())
-        .unwrap_or(Level::Info);
+        .unwrap_or(Level::Error);
     log::set_max_level(max_level.to_level_filter());
 }
 

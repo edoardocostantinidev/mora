@@ -1,24 +1,35 @@
 use axum::{
+    extract::ConnectInfo,
     http::StatusCode,
+    middleware,
     routing::{delete, get, post},
-    Router,
+    Router, ServiceExt,
 };
 use log::info;
 use mora_channel::ChannelManager;
-use mora_core::result::{MoraError, MoraResult};
+use mora_core::{
+    entities::connections_info::ConnectionsInfo,
+    result::{MoraError, MoraResult},
+};
 use mora_queue::pool::QueuePool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
 
+use crate::{connections::Connections, middlewares::connections::ConnectionMiddleware};
+
+pub(crate) mod connections;
+pub(crate) mod middlewares;
 pub(crate) mod routes;
 
 pub type QueuePoolState = Arc<Mutex<QueuePool>>;
 pub type ChannelManagerState = Arc<Mutex<ChannelManager>>;
+pub type ConnectionsState = Arc<Mutex<Connections>>;
 
 #[derive(Clone)]
 pub struct AppState {
     queue_pool: QueuePoolState,
     channel_manager: ChannelManagerState,
+    connections: ConnectionsState,
 }
 
 pub struct MoraApi {
@@ -34,9 +45,11 @@ impl MoraApi {
         channel_manager: Arc<Mutex<ChannelManager>>,
         queue_pool: Arc<Mutex<QueuePool>>,
     ) -> MoraResult<()> {
+        let connections = Arc::new(Mutex::new(Connections::default()));
         let app_state = AppState {
             channel_manager,
             queue_pool,
+            connections,
         };
 
         let app = Router::new()
@@ -57,6 +70,14 @@ impl MoraApi {
                 "/channels/{channel_id}/events",
                 get(routes::channels::get_channel_events),
             )
+            .route(
+                "/connections/info",
+                get(routes::connections::get_connections_info),
+            )
+            .route_layer(middleware::from_extractor_with_state::<
+                ConnectionMiddleware,
+                AppState,
+            >(app_state.clone()))
             .with_state(app_state);
         let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
             .parse()
@@ -66,7 +87,7 @@ impl MoraApi {
         let listener = tokio::net::TcpListener::bind(addr)
             .await
             .map_err(|e| MoraError::ApiError(format!("error binding listener: {e}")))?;
-        let service = app.into_make_service();
+        let service = app.into_make_service_with_connect_info::<SocketAddr>();
 
         axum::serve(listener, service)
             .await

@@ -3,22 +3,26 @@ use mora_core::{
     result::{MoraError, MoraResult},
 };
 
-use reqwest::{StatusCode, Url};
+use reqwest::{RequestBuilder, Response, StatusCode, Url};
 use url::ParseError;
+
+const MORA_ID_KEY_HEADER: &str = "MORA-ID-KEY";
 
 #[derive(Debug, Clone)]
 pub struct MoraClient {
     base_url: String,
     port: u16,
     http_client: reqwest::Client,
+    id_key: String,
 }
 
 impl MoraClient {
-    pub fn new(base_url: String, port: u16) -> Self {
+    pub fn new(base_url: String, port: u16, id_key: String) -> Self {
         Self {
             base_url,
             port,
             http_client: reqwest::Client::new(),
+            id_key,
         }
     }
 
@@ -35,51 +39,38 @@ impl MoraClient {
         .map_err(handle_url_error)
     }
 
-    pub async fn get_cluster_status(&self) -> MoraResult<ClusterStatus> {
-        let url = self.build_url("health")?;
+    async fn get_request<T: serde::de::DeserializeOwned>(&self, path: &str) -> MoraResult<T> {
+        let url = self.build_url(path)?;
         let response = self
             .http_client
             .clone()
             .get(url)
+            .header(MORA_ID_KEY_HEADER, self.id_key.to_owned())
             .send()
-            .await
-            .map_err(handle_request_error)?;
+            .await;
 
-        match response.status() {
-            StatusCode::OK => {
+        match response {
+            Ok(response) => {
                 let raw_body = response.text().await.map_err(handle_request_error)?;
-                let status = serde_json::from_str::<ClusterStatus>(&raw_body)
-                    .map_err(|err| handle_decode_error(err, &raw_body))?;
-                Ok(status)
+                Ok(serde_json::from_str::<T>(&raw_body)
+                    .map_err(|e| handle_decode_error(e, &raw_body))?)
             }
+            Err(error) => Err(handle_request_error(error)),
+        }
+    }
+
+    pub async fn get_cluster_status(&self) -> MoraResult<ClusterStatus> {
+        let cluster_status = self.get_request::<ClusterStatus>("health").await?;
+
+        match cluster_status {
+            ClusterStatus::Online(_) => Ok(cluster_status),
             _ => Ok(ClusterStatus::Offline),
         }
     }
 
     pub async fn get_connections_info(&self) -> MoraResult<ConnectionsInfo> {
-        let url = self.build_url("connections")?;
-        let response = self
-            .http_client
-            .clone()
-            .get(url)
-            .send()
+        self.get_request::<ConnectionsInfo>("connections/info")
             .await
-            .map_err(handle_request_error)?;
-
-        match response.status() {
-            StatusCode::OK => {
-                let raw_body = response.text().await.map_err(handle_request_error)?;
-                let status = serde_json::from_str::<ConnectionsInfo>(&raw_body)
-                    .map_err(|err| handle_decode_error(err, &raw_body))?;
-                Ok(status)
-            }
-            StatusCode::INTERNAL_SERVER_ERROR => Err(MoraError::GenericError(
-                "failed to get connections info: internal server error".to_string(),
-            )),
-            _ => Err(MoraError::GenericError(
-                "failed to get connections info: unknown error".to_string(),
-            )),
-        }
     }
 }
 

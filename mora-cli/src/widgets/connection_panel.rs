@@ -95,7 +95,7 @@ impl ConnectionPanelWidget {
         state.already_fetched_once = true;
         state
             .connections_by_second
-            .push_back((connections_info.clients_connected, time));
+            .push_back((connections_info.clients_connected as u64, time));
         state.loading_state = LoadingState::Loaded(state.connections_by_second.clone());
     }
 
