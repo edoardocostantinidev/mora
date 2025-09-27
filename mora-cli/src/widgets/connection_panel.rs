@@ -2,16 +2,13 @@ use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use color_eyre::owo_colors::OwoColorize;
 use mora_core::entities::connections_info::ConnectionsInfo;
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::symbols;
-use ratatui::widgets::{
-    Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget,
-};
+use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget};
 
 use mora_client::MoraClient;
 

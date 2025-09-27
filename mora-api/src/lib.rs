@@ -2,7 +2,7 @@ use axum::{
     http::StatusCode,
     middleware,
     routing::{delete, get, post},
-    Router, ServiceExt,
+    Router,
 };
 use log::info;
 use mora_channel::ChannelManager;

@@ -6,7 +6,7 @@ use color_eyre::Result;
 use crossterm::event::{Event, EventStream, KeyCode};
 use mora_client::MoraClient;
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::widgets::{Block, Widget};
+use ratatui::widgets::Block;
 use ratatui::{DefaultTerminal, Frame};
 use tokio_stream::StreamExt;
 

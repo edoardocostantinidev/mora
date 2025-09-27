@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-
 pub type ConnectionId = String;
 
 #[derive(Debug, Clone, Default)]
