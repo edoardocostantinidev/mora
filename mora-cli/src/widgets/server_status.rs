@@ -6,8 +6,7 @@ use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style, Stylize};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListDirection, Widget};
+use ratatui::widgets::{Block, List, ListDirection, Widget};
 
 use crate::selectable::Selectable;
 

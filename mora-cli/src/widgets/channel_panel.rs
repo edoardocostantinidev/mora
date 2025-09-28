@@ -1,15 +1,13 @@
-use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use mora_core::models::channels::{Channel, ListChannelsResponse};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
-use ratatui::style::{Color, Modifier, Style, Stylize};
-use ratatui::symbols;
+use ratatui::layout::Rect;
+use ratatui::style::{Modifier, Style, Stylize};
 use ratatui::widgets::{
-    Axis, Block, Borders, Chart, Dataset, GraphType, List, ListDirection, Widget,
+    Block, List, ListDirection, Widget,
 };
 
 use crate::selectable::Selectable;

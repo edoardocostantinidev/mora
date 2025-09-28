@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use log::{debug, error, info};
-use mora_channel::Channel;
 use mora_core::{
     clock::Clock,
     models::channels::{
