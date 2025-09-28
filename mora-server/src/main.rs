@@ -24,9 +24,8 @@ impl Server {
     pub async fn run(self) -> MoraResult<()> {
         let mut tasks = JoinSet::new();
         let channel_manager = Arc::new(Mutex::new(ChannelManager::new()));
-        let queue_pool = Arc::new(Mutex::new(QueuePool::new(
-            self.config.queue_pool_capacity(),
-        )));
+        let queue_pool = QueuePool::new(self.config.queue_pool_capacity())?;
+        let queue_pool = Arc::new(Mutex::new(queue_pool));
 
         let api = MoraApi::new(self.config.port());
         let channel_manager_for_api = channel_manager.clone();

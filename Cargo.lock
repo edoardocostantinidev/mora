@@ -1331,6 +1331,7 @@ dependencies = [
 name = "mora-queue"
 version = "0.1.0"
 dependencies = [
+ "log",
  "mora-core",
  "regex",
 ]

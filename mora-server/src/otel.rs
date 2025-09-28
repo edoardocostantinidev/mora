@@ -90,7 +90,7 @@ fn init_logger_provider() {
     let max_level = env::var("MORA_LOG_LEVEL")
         .ok()
         .and_then(|l| Level::from_str(l.to_lowercase().as_str()).ok())
-        .unwrap_or(Level::Error);
+        .unwrap_or(Level::Warn);
     log::set_max_level(max_level.to_level_filter());
 }
 

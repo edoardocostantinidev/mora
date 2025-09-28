@@ -6,6 +6,8 @@ pub type MoraResult<T> = Result<T, MoraError>;
 pub enum MoraError {
     #[error("queue already exists: `{0}`")]
     QueueAlreadyExists(String),
+    #[error("dequeue operation failed: `{0}`")]
+    DequeueError(String),
     #[error("enqueue operation failed: `{0}`")]
     EnqueueError(String),
     #[error("error reading config: `{0}`")]
@@ -18,4 +20,8 @@ pub enum MoraError {
     GenericError(String),
     #[error("connection error: `{0}`")]
     ConnectionError(String),
+    #[error("queue full")]
+    QueueFull,
+    #[error("file error: `{0}`")]
+    FileError(String),
 }

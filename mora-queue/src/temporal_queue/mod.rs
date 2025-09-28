@@ -1,3 +1,5 @@
+use mora_core::result::MoraError;
+
 use crate::priority_queue::{naive::NaivePriorityQueue, PriorityQueue};
 
 #[derive(Debug, Clone)]
@@ -41,9 +43,9 @@ where
     }
 
     /// Enqueues a value
-    pub fn enqueue(&mut self, timestamp: u128, value: V) -> Result<(), &str> {
+    pub(crate) fn enqueue(&mut self, timestamp: u128, value: V) -> Result<(), MoraError> {
         match self.capacity {
-            n if self.len == n => Err("queue full"),
+            n if self.len == n => Err(MoraError::QueueFull),
             _ => {
                 self.inner.enqueue(timestamp, value);
                 self.len += 1;
@@ -58,9 +60,10 @@ where
         loop {
             match self.inner.peek() {
                 Some(v) if v.0 <= timestamp => {
-                    let mut dequeued = self.inner.dequeue(1).into_iter();
-                    self.len -= 1;
-                    values.push(dequeued.next().unwrap())
+                    if let Some(dequeued) = self.inner.dequeue(1).into_iter().next() {
+                        self.len -= 1;
+                        values.push(dequeued)
+                    }
                 }
                 _ => {
                     return values;
@@ -72,6 +75,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use mora_core::result::MoraResult;
+
     use super::*;
 
     #[test]
@@ -80,7 +85,7 @@ mod tests {
     }
 
     #[test]
-    fn temporal_queue_should_enqueue_items_correctly() -> Result<(), String> {
+    fn temporal_queue_should_enqueue_items_correctly() -> MoraResult<()> {
         let mut tq = TemporalQueue::<i32>::default();
         tq.enqueue(3, 3)?;
         tq.enqueue(4, 4)?;
@@ -91,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn temporal_queue_dequeue_until_dequeues_until_given_timestamp() -> Result<(), String> {
+    fn temporal_queue_dequeue_until_dequeues_until_given_timestamp() -> MoraResult<()> {
         let mut tq = TemporalQueue::<i32>::default();
         tq.enqueue(1, 1)?;
         tq.enqueue(2, 2)?;
