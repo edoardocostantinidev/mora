@@ -1,30 +1,18 @@
+use crate::AppState;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     Json,
 };
-use mora_core::clock::Clock;
-use serde::{Deserialize, Serialize};
 use log::{debug, error, info};
-
-use crate::AppState;
-
-#[derive(Deserialize, Serialize)]
-pub struct BufferOptions {
-    time: u128,
-    size: usize,
-}
-
-#[derive(Deserialize)]
-pub struct CreateChannelRequest {
-    queues: Vec<String>,
-    buffer_options: BufferOptions,
-}
-
-#[derive(Serialize)]
-pub struct CreateChannelResponse {
-    channel_id: String,
-}
+use mora_channel::Channel;
+use mora_core::{
+    clock::Clock,
+    models::channels::{
+        BufferOptions, CreateChannelRequest, CreateChannelResponse, Event,
+        GetChannelEventsResponse, GetChannelResponse, ListChannelsResponse,
+    },
+};
 
 /// Creates a channel.
 pub async fn create_channel(
@@ -54,11 +42,6 @@ pub async fn create_channel(
     }))
 }
 
-#[derive(Serialize)]
-pub struct ListChannelsResponse {
-    channels: Vec<String>,
-}
-
 /// List active channels
 pub async fn list_channels(
     State(app_state): State<AppState>,
@@ -70,17 +53,17 @@ pub async fn list_channels(
         .get_channels()
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .into_iter()
-        .map(|channel| channel.id().to_owned())
+        .map(|channel| mora_core::models::channels::Channel {
+            channel_id: channel.id().to_owned(),
+            queues: channel.queues().to_owned(),
+            buffer_options: BufferOptions {
+                size: channel.buffer_size(),
+                time: channel.buffer_time(),
+            },
+            msec_from_last_op: channel.msec_from_last_op(),
+        })
         .collect();
     Ok(Json(ListChannelsResponse { channels }))
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct GetChannelResponse {
-    channel_id: String,
-    queues: Vec<String>,
-    buffer_options: BufferOptions,
-    msec_from_last_op: usize,
 }
 
 /// Get an active channel
@@ -110,16 +93,6 @@ pub async fn get_channel(
     }
 }
 
-#[derive(Serialize)]
-struct Event {
-    data: String,
-}
-
-#[derive(Serialize)]
-pub struct GetChannelEventsResponse {
-    events: Vec<Event>,
-}
-
 pub async fn get_channel_events(
     State(app_state): State<AppState>,
     channel_id: Path<String>,
@@ -132,6 +105,7 @@ pub async fn get_channel_events(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     match channel_opt {
         Some(channel) => {
+            channel.reset_msec_from_last_op();
             let timestamp = Clock::now();
             let delta = channel.buffer_time();
             let mut events: Vec<Event> = vec![];

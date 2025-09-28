@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
-use mora_core::entities::connections_info::ConnectionsInfo;
+use mora_core::models::connections::ConnectionsInfo;
 use opentelemetry::{
     global,
     trace::{Span, Tracer},

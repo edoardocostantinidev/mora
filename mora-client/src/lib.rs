@@ -1,5 +1,8 @@
 use mora_core::{
-    entities::{cluster_status::ClusterStatus, connections_info::ConnectionsInfo},
+    models::{
+        channels::ListChannelsResponse, connections::ConnectionsInfo, health::ClusterStatus,
+        queues::ListQueuesResponse,
+    },
     result::{MoraError, MoraResult},
 };
 
@@ -71,6 +74,14 @@ impl MoraClient {
     pub async fn get_connections_info(&self) -> MoraResult<ConnectionsInfo> {
         self.get_request::<ConnectionsInfo>("connections/info")
             .await
+    }
+
+    pub async fn get_queues(&self) -> MoraResult<ListQueuesResponse> {
+        self.get_request::<ListQueuesResponse>("queues").await
+    }
+
+    pub async fn get_channels(&self) -> MoraResult<ListChannelsResponse> {
+        self.get_request::<ListChannelsResponse>("channels").await
     }
 }
 

@@ -1,14 +1,12 @@
-use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use mora_core::entities::connections_info::ConnectionsInfo;
+use mora_core::models::queues::{ListQueuesResponse, Queue};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::symbols;
-use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget};
+use ratatui::layout::Rect;
+use ratatui::style::{Modifier, Style, Stylize};
+use ratatui::widgets::{Block, List, ListDirection, Widget};
 
 use mora_client::MoraClient;
 
@@ -17,13 +15,13 @@ use crate::selectable::Selectable;
 #[derive(Debug, Clone)]
 pub struct QueuePanelWidget {
     mora_client: MoraClient,
-    state: Arc<RwLock<ConnectionsInfoState>>,
+    state: Arc<RwLock<QueuesState>>,
     selected: bool,
 }
 
 impl QueuePanelWidget {
     pub fn new(mora_client: &MoraClient) -> Self {
-        let initial_state = ConnectionsInfoState::default();
+        let initial_state = QueuesState::default();
 
         Self {
             mora_client: mora_client.clone(),
@@ -43,12 +41,10 @@ impl Selectable for QueuePanelWidget {
     }
 }
 
-type ConnectionsBySecond = VecDeque<(u64, i64)>; // (connections, timestamp)
-
 #[derive(Debug, Default)]
-struct ConnectionsInfoState {
+struct QueuesState {
     loading_state: LoadingState,
-    connections_by_second: ConnectionsBySecond,
+    queues: Vec<Queue>,
     already_fetched_once: bool,
 }
 
@@ -57,12 +53,11 @@ enum LoadingState {
     #[default]
     Idle,
     Loading,
-    Loaded(ConnectionsBySecond),
+    Loaded(Vec<Queue>),
     Error(String),
 }
 
-const MAX_POINTS_IN_CHART: usize = 160;
-const REFRESH_INTERVAL_IN_MSEC: u64 = 32; // 30 fps
+const REFRESH_INTERVAL_IN_MSEC: u64 = 500;
 
 impl QueuePanelWidget {
     pub fn run(&self) {
@@ -77,14 +72,14 @@ impl QueuePanelWidget {
 
     async fn fetch_status(&self) {
         if !self.state.read().unwrap().already_fetched_once {
-            self.set_loading_state(LoadingState::Loading);
+            let mut state = self.state.write().unwrap();
+            state.loading_state = LoadingState::Loading;
         }
 
-        let connections_info_result = self.mora_client.get_connections_info().await;
-        self.state.write().unwrap().already_fetched_once = true;
-        match connections_info_result {
-            Ok(connections_info) => {
-                self.on_load(connections_info);
+        let queues_result = self.mora_client.get_queues().await;
+        match queues_result {
+            Ok(ListQueuesResponse { queues }) => {
+                self.on_load(queues);
             }
             Err(err) => {
                 self.on_err(&err);
@@ -92,158 +87,61 @@ impl QueuePanelWidget {
         }
     }
 
-    fn on_load(&self, connections_info: ConnectionsInfo) {
-        let time = chrono::Utc::now()
-            .timestamp_nanos_opt()
-            .expect("are we seriously in year 2262?");
+    fn on_load(&self, queues: Vec<Queue>) {
         let mut state = self.state.write().unwrap();
-
-        if state.connections_by_second.len() >= MAX_POINTS_IN_CHART {
-            state.connections_by_second.pop_front();
-        }
-
         state.already_fetched_once = true;
-        state
-            .connections_by_second
-            .push_back((connections_info.clients_connected as u64, time));
-        state.loading_state = LoadingState::Loaded(state.connections_by_second.clone());
+        state.queues = queues.clone();
+        state.loading_state = LoadingState::Loaded(queues);
     }
 
     fn on_err(&self, err: &MoraError) {
-        self.set_loading_state(LoadingState::Error(err.to_string()));
-    }
-
-    fn set_loading_state(&self, state: LoadingState) {
-        self.state.write().unwrap().loading_state = state;
+        let mut state = self.state.write().unwrap();
+        state.already_fetched_once = true;
+        state.loading_state = LoadingState::Error(err.to_string());
     }
 }
 
 impl Widget for &QueuePanelWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let state = self.state.write().unwrap();
-        let color = ratatui::style::Color::LightMagenta;
+        let state = self.state.read().unwrap();
+        let color = ratatui::style::Color::LightBlue;
 
-        let block = Block::bordered().border_style(Style::default().fg(color));
+        let modifier = if self.is_selected() {
+            Modifier::BOLD
+        } else {
+            Modifier::empty()
+        };
 
-        match &state.loading_state {
-            LoadingState::Idle | LoadingState::Loading => {
-                let items = [format!("Loading data... 🟡")];
-                let list = List::new(items)
-                    .block(Block::bordered().title("List"))
-                    .style(Style::new().white())
-                    .highlight_style(Style::new().italic())
-                    .highlight_symbol(">>")
-                    .repeat_highlight_symbol(true)
-                    .direction(ListDirection::TopToBottom);
+        let block = Block::bordered()
+            .title("Queues")
+            .border_style(Style::default().fg(color))
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .add_modifier(modifier);
 
-                block.title("Connections (Loading)").render(area, buf);
+        let items = match &state.loading_state {
+            LoadingState::Idle => vec![format!("Initializing...")],
+            LoadingState::Loading => vec![format!("Loading data... 🟡")],
+            LoadingState::Error(err) => vec![
+                format!("Server Offline! 🔴"),
+                "Can't retrieve queues!".to_string(),
+                format!("Error: {err}"),
+            ],
+            LoadingState::Loaded(queues) => queues
+                .iter()
+                .map(|queue| format!("{}: {}", queue.id, queue.pending_events_count))
+                .collect::<Vec<String>>(),
+        };
 
-                list.render(area, buf);
-            }
-            LoadingState::Error(err) => {
-                let items = [
-                    format!("Server Offline! 🔴"),
-                    "Can't retrieve connections!".to_string(),
-                    format!("Error: {err}"),
-                ];
-                let list = List::new(items)
-                    .block(Block::bordered().title("List"))
-                    .style(Style::new().white())
-                    .highlight_style(Style::new().italic())
-                    .highlight_symbol(">>")
-                    .repeat_highlight_symbol(true)
-                    .direction(ListDirection::TopToBottom);
+        let list = List::new(items)
+            .block(block)
+            .style(Style::new().white())
+            .highlight_style(Style::new().italic())
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::TopToBottom);
 
-                block.title("Connections (Error)").render(area, buf);
-
-                list.render(area, buf);
-            }
-            LoadingState::Loaded(connections_info) => {
-                connections_info_chart(area, buf, connections_info);
-                block
-                    .title(format!(
-                        "Connections (Current: {})",
-                        connections_info
-                            .iter()
-                            .last()
-                            .map(|(connections, _)| *connections)
-                            .unwrap_or(0)
-                    ))
-                    .render(area, buf);
-            }
-        }
+        list.render(area, buf);
 
         return;
     }
-}
-
-fn connections_info_chart(
-    area: Rect,
-    buf: &mut Buffer,
-    connections_by_second: &ConnectionsBySecond,
-) {
-    let mut max_connections = 0.0;
-
-    let data = connections_by_second
-        .iter()
-        .map(|(connections, timestamp)| (*connections as f64, *timestamp as f64))
-        .collect::<Vec<(f64, f64)>>();
-
-    data.iter().for_each(|(x, _)| {
-        if *x > max_connections {
-            max_connections = *x;
-        }
-    });
-
-    let min_time = data.first().map(|(_, t)| *t as f64).unwrap_or(0.0);
-    let max_time = data.last().map(|(_, t)| *t as f64).unwrap_or(0.0);
-    let max_connections_label = format!("{:.0}", max_connections * 1.25);
-
-    let adjusted_data = data
-        .iter()
-        .map(|(x, y)| ((*y - min_time) / 1e8, *x))
-        .collect::<Vec<(f64, f64)>>();
-
-    let bound_min_time = adjusted_data.first().map(|(t, _)| *t).unwrap_or(0.0);
-    let bound_max_time = adjusted_data.last().map(|(t, _)| *t).unwrap_or(0.0);
-    let bound_min_connections = 0.0;
-    let bound_max_connections = adjusted_data
-        .iter()
-        .max_by_key(|(_, x)| *x as i64)
-        .map(|(_, x)| *x)
-        .unwrap_or(0.0)
-        * 1.15;
-
-    let min_time_label = chrono::DateTime::from_timestamp_nanos(min_time as i64)
-        .format("%H:%M:%S")
-        .to_string();
-    let max_time_label = chrono::DateTime::from_timestamp_nanos(max_time as i64)
-        .format("%H:%M:%S")
-        .to_string();
-
-    let datasets = vec![Dataset::default()
-        .marker(symbols::Marker::Braille)
-        .style(Style::default().fg(Color::Magenta))
-        .graph_type(GraphType::Line)
-        .data(&adjusted_data)];
-
-    let chart = Chart::new(datasets)
-        .block(Block::bordered())
-        .x_axis(
-            Axis::default()
-                .style(Style::default().fg(Color::Magenta))
-                .bounds([bound_min_time, bound_max_time])
-                .labels([min_time_label, max_time_label])
-                .labels_alignment(Alignment::Center),
-        )
-        .y_axis(
-            Axis::default()
-                .style(Style::default().fg(Color::Magenta))
-                .bounds([bound_min_connections, bound_max_connections])
-                .labels(["0".to_string(), max_connections_label])
-                .labels_alignment(Alignment::Center),
-        )
-        .legend_position(None);
-
-    chart.render(area, buf);
 }

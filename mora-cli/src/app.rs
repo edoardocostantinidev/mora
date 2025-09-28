@@ -47,6 +47,8 @@ impl App {
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         self.server_status.run();
         self.connection_panel.run();
+        self.queue_panel.run();
+        self.channel_panel.run();
 
         let period = Duration::from_secs_f32(1.0 / Self::FRAMES_PER_SECOND);
         let mut interval = tokio::time::interval(period);

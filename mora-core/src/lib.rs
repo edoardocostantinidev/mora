@@ -1,3 +1,3 @@
 pub mod clock;
-pub mod entities;
+pub mod models;
 pub mod result;

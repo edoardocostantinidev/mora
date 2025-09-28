@@ -1311,6 +1311,7 @@ name = "mora-client"
 version = "0.1.0"
 dependencies = [
  "log",
+ "mora-api",
  "mora-core",
  "reqwest",
  "serde",

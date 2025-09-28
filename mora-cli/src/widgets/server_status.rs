@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use mora_core::entities::cluster_status::{ClusterStatus, ClusterStatusData};
+use mora_core::models::health::{ClusterStatus, ClusterStatusData};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Style, Stylize};
+use ratatui::style::{Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListDirection, Widget};
 
@@ -136,18 +136,22 @@ impl Widget for &ServerStatusWidget {
             ClusterStatus::Degraded(_) => ratatui::style::Color::Yellow,
             ClusterStatus::Offline => ratatui::style::Color::Red,
         };
+
+        let modifier = if self.is_selected() {
+            Modifier::BOLD
+        } else {
+            Modifier::empty()
+        };
+
         let block = Block::bordered()
             .border_style(Style::default().fg(color))
-            .title("Server Status");
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .title("Server Status")
+            .add_modifier(modifier);
 
         match &state.loading_state {
             LoadingState::Idle | LoadingState::Loading => {
-                let loading_text = Line::from(Span::styled(
-                    "Loading...",
-                    Style::default().fg(ratatui::style::Color::Yellow).italic(),
-                ))
-                .centered();
-                buf.set_line(area.x, area.y + area.height / 2, &loading_text, area.width);
+                block.render(area, buf);
             }
             LoadingState::Error(err) => {
                 let items = [
@@ -156,7 +160,7 @@ impl Widget for &ServerStatusWidget {
                     format!("Error: {err}"),
                 ];
                 let list = List::new(items)
-                    .block(Block::bordered().title("List"))
+                    .block(block)
                     .style(Style::new().white())
                     .highlight_style(Style::new().italic())
                     .highlight_symbol(">>")
@@ -169,16 +173,21 @@ impl Widget for &ServerStatusWidget {
                 version,
                 current_time_in_ns,
             }) => {
-                server_health_list(area, buf, version, current_time_in_ns);
+                server_health_list(area, buf, version, current_time_in_ns, block);
             }
         }
 
-        block.render(area, buf);
         return;
     }
 }
 
-fn server_health_list(area: Rect, buf: &mut Buffer, version: &str, current_time_in_ns: &u128) {
+fn server_health_list(
+    area: Rect,
+    buf: &mut Buffer,
+    version: &str,
+    current_time_in_ns: &u128,
+    block: Block,
+) {
     // Convert u128 to i64 safely, saturating at i64::MAX if necessary
     let current_time_in_ns_i64 = if *current_time_in_ns > i64::MAX as u128 {
         i64::MAX
@@ -194,11 +203,7 @@ fn server_health_list(area: Rect, buf: &mut Buffer, version: &str, current_time_
         format!("Current Server Time: {}", current_time),
     ];
     let list = List::new(items)
-        .block(
-            Block::new()
-                .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-                .title("Server Status"),
-        )
+        .block(block)
         .style(Style::new().white())
         .repeat_highlight_symbol(true)
         .direction(ListDirection::TopToBottom);

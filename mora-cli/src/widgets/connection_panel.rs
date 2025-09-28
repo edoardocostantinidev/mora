@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use mora_core::entities::connections_info::ConnectionsInfo;
+use mora_core::models::connections::ConnectionsInfo;
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
-use ratatui::style::{Color, Style, Stylize};
+use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::symbols;
 use ratatui::widgets::{Axis, Block, Chart, Dataset, GraphType, List, ListDirection, Widget};
 
@@ -123,20 +123,28 @@ impl Widget for &ConnectionPanelWidget {
         let state = self.state.write().unwrap();
         let color = ratatui::style::Color::LightMagenta;
 
-        let block = Block::bordered().border_style(Style::default().fg(color));
+        let modifier = if self.is_selected() {
+            Modifier::BOLD
+        } else {
+            Modifier::empty()
+        };
+
+        let block = Block::bordered()
+            .title("Connections")
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(color))
+            .add_modifier(modifier);
 
         match &state.loading_state {
             LoadingState::Idle | LoadingState::Loading => {
                 let items = [format!("Loading data... 🟡")];
                 let list = List::new(items)
-                    .block(Block::bordered().title("List"))
+                    .block(block)
                     .style(Style::new().white())
                     .highlight_style(Style::new().italic())
                     .highlight_symbol(">>")
                     .repeat_highlight_symbol(true)
                     .direction(ListDirection::TopToBottom);
-
-                block.title("Connections (Loading)").render(area, buf);
 
                 list.render(area, buf);
             }
@@ -147,14 +155,12 @@ impl Widget for &ConnectionPanelWidget {
                     format!("Error: {err}"),
                 ];
                 let list = List::new(items)
-                    .block(Block::bordered().title("List"))
+                    .block(block)
                     .style(Style::new().white())
                     .highlight_style(Style::new().italic())
                     .highlight_symbol(">>")
                     .repeat_highlight_symbol(true)
                     .direction(ListDirection::TopToBottom);
-
-                block.title("Connections (Error)").render(area, buf);
 
                 list.render(area, buf);
             }

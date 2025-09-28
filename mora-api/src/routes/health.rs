@@ -1,7 +1,7 @@
 use axum::{http::StatusCode, Json};
 use mora_core::{
     clock::Clock,
-    entities::cluster_status::{ClusterStatus, ClusterStatusData},
+    models::health::{ClusterStatus, ClusterStatusData},
 };
 use opentelemetry::{
     global,

@@ -55,10 +55,7 @@ impl QueuePool {
         Ok(self
             .queues
             .keys()
-            .filter(|k| {
-                dbg!(&k);
-                pattern.is_match(k)
-            })
+            .filter(|k| pattern.is_match(k))
             .map(|k| (k.to_owned(), self.queues.get(k).unwrap()))
             .collect())
     }

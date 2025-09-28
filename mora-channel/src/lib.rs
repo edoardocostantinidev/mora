@@ -29,9 +29,7 @@ impl Channel {
         &self.id
     }
 
-    pub fn queues(&mut self) -> &Vec<String> {
-        self.msec_from_last_op = 0;
-        info!("Zeroed msec from last op for {}", self.id);
+    pub fn queues(&self) -> &Vec<String> {
         &self.queues
     }
 
@@ -48,6 +46,10 @@ impl Channel {
 
     pub fn update_msec_from_last_op(&mut self, msec: usize) {
         self.msec_from_last_op += msec;
+    }
+
+    pub fn reset_msec_from_last_op(&mut self) {
+        self.msec_from_last_op = 0;
     }
 }
 
