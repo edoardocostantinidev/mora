@@ -4,9 +4,9 @@ use std::time::Duration;
 use mora_core::models::queues::{ListQueuesResponse, Queue};
 use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style, Stylize};
-use ratatui::widgets::{Block, List, ListDirection, Widget};
+use ratatui::widgets::{Block, Borders, List, ListDirection, Padding, Paragraph, Widget, Wrap};
 
 use mora_client::MoraClient;
 
@@ -118,19 +118,29 @@ impl Widget for &QueuePanelWidget {
             .border_type(ratatui::widgets::BorderType::Rounded)
             .add_modifier(modifier);
 
-        let items = match &state.loading_state {
-            LoadingState::Idle => vec![format!("Initializing...")],
-            LoadingState::Loading => vec![format!("Loading data... 🟡")],
-            LoadingState::Error(err) => vec![
-                format!("Server Offline! 🔴"),
-                "Can't retrieve queues!".to_string(),
-                format!("Error: {err}"),
-            ],
-            LoadingState::Loaded(queues) => queues
-                .iter()
-                .map(|queue| format!("{}: {}", queue.id, queue.pending_events_count))
-                .collect::<Vec<String>>(),
+        let (items, maybe_paragraph) = match &state.loading_state {
+            LoadingState::Idle => (vec![format!("Initializing...")], None),
+            LoadingState::Loading => (vec![format!("Loading data... 🟡")], None),
+            LoadingState::Error(err) => (
+                vec![
+                    format!("Server Offline! 🔴"),
+                    "Can't retrieve queues!".to_string(),
+                ],
+                Some(Paragraph::new(format!("Error: {err}")).wrap(Wrap { trim: false })),
+            ),
+            LoadingState::Loaded(queues) => (
+                queues
+                    .iter()
+                    .map(|queue| format!("{}: {}", queue.id, queue.pending_events_count))
+                    .collect::<Vec<String>>(),
+                None,
+            ),
         };
+
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(100)])
+            .split(area);
 
         let list = List::new(items)
             .block(block)
@@ -140,7 +150,29 @@ impl Widget for &QueuePanelWidget {
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom);
 
-        list.render(area, buf);
+        list.render(layout[0], buf);
+
+        if let Some(paragraph) = maybe_paragraph {
+            let error_layout_percentage = 20;
+            let error_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![
+                    Constraint::Percentage(error_layout_percentage),
+                    Constraint::Percentage(100 - error_layout_percentage),
+                ])
+                .margin(2)
+                .split(layout[0]);
+
+            let error_block = Block::bordered()
+                .title("Error")
+                .border_style(Style::default().fg(ratatui::style::Color::Red))
+                .border_type(ratatui::widgets::BorderType::Rounded);
+
+            paragraph
+                .block(error_block)
+                .alignment(Alignment::Center)
+                .render(error_layout[1], buf);
+        }
 
         return;
     }
