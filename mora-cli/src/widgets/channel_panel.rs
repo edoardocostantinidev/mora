@@ -6,9 +6,7 @@ use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style, Stylize};
-use ratatui::widgets::{
-    Block, List, ListDirection, Widget,
-};
+use ratatui::widgets::{Block, List, ListDirection, Widget};
 
 use crate::selectable::Selectable;
 
@@ -46,7 +44,6 @@ impl Selectable for ChannelPanelWidget {
 #[derive(Debug, Default)]
 struct ChannelsState {
     loading_state: LoadingState,
-    channels: Vec<Channel>,
     already_fetched_once: bool,
 }
 
