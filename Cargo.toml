@@ -8,6 +8,7 @@ members = [
     "mora-server",
     "mora-client",
     "mora-cli",
+    "mora-storage",
 ]
 
 [workspace.dependencies]
