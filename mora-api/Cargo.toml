@@ -9,6 +9,8 @@ edition = "2021"
 mora-core = { workspace = true }
 mora-channel = { workspace = true }
 mora-queue = { workspace = true }
+mora-storage = { workspace = true }
+
 chrono = { workspace = true }
 futures-util = { workspace = true }
 log = { workspace = true }

@@ -19,6 +19,7 @@ mora-api = { path = "./mora-api" }
 mora-server = { path = "./mora-server" }
 mora-client = { path = "./mora-client" }
 mora-cli = { path = "./mora-cli" }
+mora-storage = { path = "./mora-storage" }
 
 axum = { version = "0.8" }
 axum-macros = { version = "0.5" }
@@ -26,6 +27,7 @@ chrono = { version = "0.4.30" }
 color-eyre = "0.6.3"
 config = { version = "0.15.16" }
 crossterm = "0.29.0"
+fsst-rs = { version = "0.5.3" }
 futures-util = { version = "0.3.31" }
 log = { version = "0.4", features = ["kv"] }
 opentelemetry = "0.30"
@@ -46,14 +48,15 @@ reqwest = { version = "0.12.23", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
+rmp-serde = { version = "1" }
 serde = { version = "1.0.226", features = ["derive"] }
 serde_json = { version = "1.0.145" }
-url = { version = "2.5.1" }
 simple_logger = "5.0.0"
 thiserror = { version = "2.0.16" }
 tokio = { version = "1.47.1", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["full"] }
 tower = { version = "0.5.2" }
+url = { version = "2.5.1" }
 uuid = { version = "1.18.1", features = [
     "v4",
     "fast-rng",

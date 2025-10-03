@@ -24,4 +24,30 @@ pub enum MoraError {
     QueueFull,
     #[error("file error: `{0}`")]
     FileError(String),
+    #[error("storage error: `{0}`")]
+    StorageError(StorageError),
+}
+
+#[derive(Debug, Error)]
+pub enum StorageError {
+    #[error("container already exists: `{0}`")]
+    ContainerAlreadyExists(String),
+    #[error("container creation failed: `{0}`")]
+    ContainerCreationFailed(String),
+    #[error("container deletion failed: `{0}`")]
+    ContainerDeletionFailed(String),
+    #[error("container not found: `{0}`")]
+    ContainerNotFound(String),
+    #[error("directory creation failed: `{0}`: `{1}`")]
+    DirectoryCreationFailed(String, String),
+    #[error("directory read failed: `{0}`")]
+    DirectoryReadFailed(String),
+    #[error("file read failed: `{0}`")]
+    FileReadFailed(String),
+    #[error("item read failed: `{0}`")]
+    ItemReadFailed(String),
+    #[error("item not found: `{0}`")]
+    ItemNotFound(String),
+    #[error("item write failed: `{0}`")]
+    ItemWriteFailed(String),
 }

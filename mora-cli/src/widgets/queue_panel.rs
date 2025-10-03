@@ -6,7 +6,7 @@ use mora_core::result::MoraError;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style, Stylize};
-use ratatui::widgets::{Block, Borders, List, ListDirection, Padding, Paragraph, Widget, Wrap};
+use ratatui::widgets::{Block, List, ListDirection, Paragraph, Widget, Wrap};
 
 use mora_client::MoraClient;
 

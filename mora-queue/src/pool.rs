@@ -1,10 +1,4 @@
-use log::info;
-use std::{
-    collections::HashMap,
-    fs::{create_dir_all, remove_file, File, OpenOptions},
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-};
+use std::collections::HashMap;
 
 use mora_core::{
     result::{MoraError, MoraResult},
@@ -16,23 +10,32 @@ use crate::temporal_queue::TemporalQueue;
 
 type Bytes = Vec<u8>;
 type QueueId = String;
-type EventId = String;
+type EventId = [u8; 16];
 
 pub struct QueuePool<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> {
     queues: HashMap<QueueId, TemporalQueue<Bytes>>,
     storage: T,
-    _capacity: usize,
 }
 
 impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePool<T> {
-    pub async fn new(capacity: usize) -> MoraResult<Self> {
+    pub async fn new() -> MoraResult<Self> {
         let storage = T::load()?;
-
-        Ok(Self {
+        let mut pool = Self {
             queues: HashMap::default(),
             storage,
-            _capacity: capacity,
-        })
+        };
+
+        let containers = pool.storage.list_containers()?;
+        for container in containers {
+            pool.queues
+                .insert(container.to_owned(), TemporalQueue::default());
+            for (key, item) in pool.storage.get_all_items(&container)? {
+                pool.get_queue_mut(&container)?
+                    .enqueue(u128::from_le_bytes(key), item)?;
+            }
+        }
+
+        Ok(pool)
     }
 
     pub fn create_queue(&mut self, id: QueueId) -> MoraResult<()> {
@@ -40,12 +43,14 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
             return Err(MoraError::QueueAlreadyExists(id));
         }
 
-        self.queues.insert(id, TemporalQueue::default());
+        self.storage.create_container(&id)?;
 
         Ok(())
     }
 
     pub fn delete_queue(&mut self, id: QueueId) -> MoraResult<QueueId> {
+        self.storage.delete_container(&id)?;
+
         self.queues
             .remove(&id)
             .ok_or(MoraError::QueueNotFound(id.to_string()))
@@ -87,24 +92,13 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
     }
 
     pub fn enqueue(&mut self, id: &QueueId, timestamp: u128, value: Bytes) -> MoraResult<()> {
-        self.enqueue_to_wal(id, timestamp, &value)?;
-        Ok(self.get_queue_mut(id)?.enqueue(timestamp, value)?)
-    }
-
-    fn enqueue_to_wal(&mut self, id: &QueueId, timestamp: u128, value: &Bytes) -> MoraResult<()> {
-        let mut buf = vec![];
-        buf.extend_from_slice(&timestamp.to_le_bytes());
-        buf.extend_from_slice(&value);
-        buf.push(b'\n');
-
-        let wal = self.wals.get_mut(id).expect("Wal file not found");
-        wal.write_all(&buf)
-            .map_err(|e| MoraError::FileError(format!("Failed to write to wal file: {e}")))?;
-        wal.flush()
-            .map_err(|e| MoraError::FileError(format!("Failed to flush wal file: {e}")))?;
+        self.storage
+            .store_item(&id, &timestamp.to_le_bytes(), &value)?;
+        self.get_queue_mut(id)?.enqueue(timestamp, value)?;
         Ok(())
     }
 
+    //TODO: this doesn't mark anything as deleted
     pub fn dequeue_until(&mut self, id: &QueueId, timestamp: u128) -> MoraResult<Vec<Bytes>> {
         Ok(self.get_queue_mut(id)?.dequeue_until(timestamp))
     }

@@ -8,6 +8,7 @@ use log::info;
 use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::pool::QueuePool;
+use mora_storage::wal_file_storage::WalFileStorage;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
@@ -17,7 +18,7 @@ pub(crate) mod connections;
 pub(crate) mod middlewares;
 pub(crate) mod routes;
 
-pub type QueuePoolState = Arc<Mutex<QueuePool>>;
+pub type QueuePoolState = Arc<Mutex<QueuePool<WalFileStorage>>>;
 pub type ChannelManagerState = Arc<Mutex<ChannelManager>>;
 pub type ConnectionsState = Arc<Mutex<Connections>>;
 
@@ -39,7 +40,7 @@ impl MoraApi {
     pub async fn start_listening(
         &self,
         channel_manager: Arc<Mutex<ChannelManager>>,
-        queue_pool: Arc<Mutex<QueuePool>>,
+        queue_pool: Arc<Mutex<QueuePool<WalFileStorage>>>,
     ) -> MoraResult<()> {
         let connections = Arc::new(Mutex::new(Connections::default()));
         let app_state = AppState {
