@@ -5,24 +5,14 @@ use axum::{
     Json,
 };
 use log::{debug, error};
-
-#[derive(serde::Serialize)]
-pub struct GetQueuesResponse {
-    queues: Vec<GetQueueResponse>,
-}
-
-#[derive(Clone, serde::Serialize)]
-pub struct GetQueueResponse {
-    id: String,
-    pending_events_count: usize,
-}
+use mora_core::models::queues::{GetQueueResponse, ListQueuesResponse, Queue};
 
 /// List all queues.
 #[axum_macros::debug_handler]
-pub async fn get_queues(
+pub async fn list_queues(
     State(app_state): State<AppState>,
-) -> Result<Json<GetQueuesResponse>, (StatusCode, String)> {
-    debug!("Received get_queues request");
+) -> Result<Json<ListQueuesResponse>, (StatusCode, String)> {
+    debug!("Received list_queues request");
 
     let queues: Vec<GetQueueResponse> = app_state
         .queue_pool
@@ -31,13 +21,13 @@ pub async fn get_queues(
         .get_queues(regex::Regex::new(r".*").unwrap())
         .map_err(handle_mora_error)?
         .iter()
-        .map(|q| GetQueueResponse {
+        .map(|q| Queue {
             id: q.0.to_owned(),
-            pending_events_count: 0,
+            pending_events_count: q.1.len,
         })
         .collect();
 
-    Ok(Json(GetQueuesResponse { queues }))
+    Ok(Json(ListQueuesResponse { queues }))
 }
 
 /// Get informations about a queue.

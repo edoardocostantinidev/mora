@@ -15,5 +15,5 @@ pub struct PostQueueRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Queue {
     pub id: String,
-    pub pending_events_count: usize,
+    pub pending_events_count: u128,
 }

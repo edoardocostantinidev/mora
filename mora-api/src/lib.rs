@@ -59,7 +59,7 @@ impl MoraApi {
 
         let app = Router::new()
             .route("/health", get(routes::health::get))
-            .route("/queues", get(routes::queues::get_queues))
+            .route("/queues", get(routes::queues::list_queues))
             .route("/queues/{queue_id}", get(routes::queues::get_queue))
             .route("/queues", post(routes::queues::create_queue))
             .route("/queues/{queue_id}", delete(routes::queues::delete_queue))
