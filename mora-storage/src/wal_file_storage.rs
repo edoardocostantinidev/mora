@@ -19,6 +19,13 @@ pub struct WalFileStorageConfig {
     wal_path: String,
 }
 
+impl WalFileStorageConfig {
+    pub fn load() -> MoraResult<Self> {
+        let wal_path = std::env::var("MORA_WAL_PATH").unwrap_or_else(|_| "/tmp/wals".to_string());
+        Ok(Self { wal_path })
+    }
+}
+
 enum ItemDescriptor {
     Tombstone = 0,
     Item = 1,
@@ -31,13 +38,6 @@ impl From<&[u8]> for ItemDescriptor {
             1 => Self::Item,
             _ => panic!("invalid item descriptor"),
         }
-    }
-}
-
-impl WalFileStorageConfig {
-    pub fn load() -> MoraResult<Self> {
-        let wal_path = std::env::var("MORA_WAL_PATH").unwrap_or_else(|_| "./wals".to_string());
-        Ok(Self { wal_path })
     }
 }
 

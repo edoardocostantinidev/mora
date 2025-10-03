@@ -44,6 +44,7 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
         }
 
         self.storage.create_container(&id)?;
+        self.queues.insert(id, TemporalQueue::default());
 
         Ok(())
     }
