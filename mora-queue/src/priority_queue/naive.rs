@@ -25,6 +25,18 @@ where
     }
 }
 
+impl<K, V> Iterator for NaivePriorityQueue<K, V>
+where
+    K: Clone + Eq + Ord,
+    V: Clone,
+{
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.items.pop_front().map(|n| (n.key, n.value))
+    }
+}
+
 impl<K: Clone + Ord, V: Clone> PriorityQueue<K, V> for NaivePriorityQueue<K, V> {
     fn is_empty(&self) -> bool {
         self.items.is_empty()

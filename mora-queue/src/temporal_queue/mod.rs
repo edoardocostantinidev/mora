@@ -54,22 +54,21 @@ where
         }
     }
 
-    pub fn dequeue_until(&mut self, timestamp: u128) -> Vec<V> {
+    pub fn dequeue_until(&mut self, timestamp: u128, delete: bool) -> Vec<V> {
         //todo: improve here using apposite data structure
         let mut values: Vec<V> = vec![];
-        loop {
-            match self.inner.peek() {
-                Some(v) if v.0 <= timestamp => {
-                    if let Some(dequeued) = self.inner.dequeue(1).into_iter().next() {
-                        self.len -= 1;
-                        values.push(dequeued)
-                    }
+        self.inner
+            .clone()
+            .take_while(|(k, _)| *k <= timestamp)
+            .map(|(_, v)| v)
+            .for_each(|v| {
+                if delete {
+                    self.len -= 1;
+                    self.inner.dequeue(1);
                 }
-                _ => {
-                    return values;
-                }
-            }
-        }
+                values.push(v);
+            });
+        values
     }
 }
 
@@ -102,7 +101,7 @@ mod tests {
         tq.enqueue(2, 2)?;
         tq.enqueue(3, 3)?;
         tq.enqueue(4, 4)?;
-        let result = tq.dequeue_until(2);
+        let result = tq.dequeue_until(2, true);
         assert_eq!(result, vec![1, 2]);
         assert_eq!(tq.len, 2);
         Ok(())

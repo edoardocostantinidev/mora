@@ -1,7 +1,8 @@
 pub mod dumb;
 pub mod naive;
 
-pub trait PriorityQueue<K, V> {
+// WARNING: implementations right now are virtually shit, they should be refactored to use a more efficient data structure
+pub trait PriorityQueue<K, V>: Iterator<Item = (K, V)> {
     fn is_empty(&self) -> bool;
     fn len(&self) -> usize;
     fn enqueue(&mut self, key: K, value: V) -> Option<V>;

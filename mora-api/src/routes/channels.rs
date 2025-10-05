@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use crate::AppState;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -95,6 +97,7 @@ pub async fn get_channel(
 pub async fn get_channel_events(
     State(app_state): State<AppState>,
     channel_id: Path<String>,
+    query_params: Query<HashMap<String, String>>,
 ) -> Result<Json<GetChannelEventsResponse>, (StatusCode, String)> {
     info!("Received get_channel_events request");
     let mut channel_manager = app_state.channel_manager.lock().await;
@@ -102,6 +105,12 @@ pub async fn get_channel_events(
     let channel_opt = channel_manager
         .get_mut_channel(&channel_id.0)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let query_params = query_params.0;
+    let delete = match query_params.get("delete") {
+        Some(value) => value.parse::<bool>().unwrap_or(false),
+        None => false,
+    };
+
     match channel_opt {
         Some(channel) => {
             channel.reset_msec_from_last_op();
@@ -115,12 +124,13 @@ pub async fn get_channel_events(
                     .get_queue_mut(queue_name)
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 info!("Queue Found {:?}", &queue);
-                let data = queue.dequeue_until(timestamp + delta);
+                let data = queue.dequeue_until(timestamp + delta, delete);
                 info!("Data Found {:?}", &data);
                 let dequeued_events: Result<Vec<_>, _> = data
                     .iter()
                     .map(|data| {
                         Ok(Event {
+                            queue_name: queue_name.to_owned(),
                             data: std::str::from_utf8(data)
                                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
                                 .to_owned(),

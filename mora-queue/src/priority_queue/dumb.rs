@@ -8,6 +8,7 @@ where
     K: Clone + Eq + Hash + Ord,
     V: Clone,
 {
+    last_key: Option<K>,
     map: HashMap<K, V>,
 }
 
@@ -19,6 +20,27 @@ where
     fn default() -> Self {
         Self {
             map: Default::default(),
+            last_key: None,
+        }
+    }
+}
+
+impl<K, V> Iterator for DumbPriorityQueue<K, V>
+where
+    K: Clone + Eq + Hash + Ord,
+    V: Clone,
+{
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.last_key {
+            Some(last_key) => self.map.keys().find(|key| key > &last_key).map(|k| {
+                (
+                    k.clone(),
+                    self.map.get(k).expect("key always in map").clone(),
+                )
+            }),
+            None => self.map.iter().next().map(|(k, v)| (k.clone(), v.clone())),
         }
     }
 }

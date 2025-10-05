@@ -34,6 +34,7 @@ pub struct Channel {
 
 #[derive(Serialize)]
 pub struct Event {
+    pub queue_name: String,
     pub data: String,
 }
 

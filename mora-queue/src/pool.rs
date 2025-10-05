@@ -99,8 +99,12 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
         Ok(())
     }
 
-    //TODO: this doesn't mark anything as deleted
-    pub fn dequeue_until(&mut self, id: &QueueId, timestamp: u128) -> MoraResult<Vec<Bytes>> {
-        Ok(self.get_queue_mut(id)?.dequeue_until(timestamp))
+    pub fn dequeue_until(
+        &mut self,
+        id: &QueueId,
+        timestamp: u128,
+        delete: bool,
+    ) -> MoraResult<Vec<Bytes>> {
+        Ok(self.get_queue_mut(id)?.dequeue_until(timestamp, delete))
     }
 }
