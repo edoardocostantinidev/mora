@@ -1,9 +1,8 @@
 use crate::config::MoraConfig;
 use log::info;
 use mora_api::MoraApi;
-use mora_channel::ChannelManager;
 use mora_core::result::MoraResult;
-use mora_queue::pool::QueuePool;
+use mora_queue::{channel_manager::ChannelManager, pool::QueuePool};
 
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinSet, time::sleep};
@@ -23,9 +22,9 @@ impl Server {
 
     pub async fn run(self) -> MoraResult<()> {
         let mut tasks = JoinSet::new();
-        let channel_manager = Arc::new(Mutex::new(ChannelManager::new()));
         let queue_pool = QueuePool::new().await?;
         let queue_pool = Arc::new(Mutex::new(queue_pool));
+        let channel_manager = Arc::new(Mutex::new(ChannelManager::default()));
 
         let api = MoraApi::new(self.config.port());
         let channel_manager_for_api = channel_manager.clone();

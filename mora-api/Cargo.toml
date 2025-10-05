@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 mora-core = { workspace = true }
-mora-channel = { workspace = true }
 mora-queue = { workspace = true }
 mora-storage = { workspace = true }
 

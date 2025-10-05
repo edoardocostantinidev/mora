@@ -34,6 +34,7 @@ pub struct Channel {
 
 #[derive(Serialize)]
 pub struct Event {
+    pub timestamp: u128,
     pub queue_name: String,
     pub data: String,
 }

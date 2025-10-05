@@ -45,4 +45,11 @@ pub trait Storage {
         &mut self,
         container_id: &Self::ContainerId,
     ) -> MoraResult<HashMap<Self::SortKey, Self::Item>>;
+
+    /// Deletes multiple items by their sort keys.
+    fn delete_items(
+        &mut self,
+        container_id: &Self::ContainerId,
+        item_sort_keys: &[Self::SortKey],
+    ) -> MoraResult<()>;
 }

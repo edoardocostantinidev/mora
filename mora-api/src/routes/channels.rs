@@ -6,13 +6,14 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use log::{debug, error, info};
+use log::{debug, info};
 use mora_core::{
     clock::Clock,
     models::channels::{
         BufferOptions, CreateChannelRequest, CreateChannelResponse, Event,
         GetChannelEventsResponse, GetChannelResponse, ListChannelsResponse,
     },
+    result::MoraError,
 };
 
 /// Creates a channel.
@@ -21,21 +22,26 @@ pub async fn create_channel(
     request: Json<CreateChannelRequest>,
 ) -> Result<Json<CreateChannelResponse>, (StatusCode, String)> {
     debug!("Received request for channel creation");
+    let pool = app_state.queue_pool.lock().await;
     let channel = app_state
         .channel_manager
         .lock()
         .await
         .create_channel(
+            &pool,
             request.queues.clone(),
             request.buffer_options.size,
             request.buffer_options.time,
         )
-        .map_err(|e| {
-            error!("couldn't create channel: {e}");
-            (
+        .map_err(|e| match e {
+            MoraError::QueueNotFound(queue) => (
+                StatusCode::NOT_FOUND,
+                format!("{} queue does not exist", queue),
+            ),
+            _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("couldn't create channel: {e}"),
-            )
+            ),
         })?;
     debug!("channel created {:?}", &channel);
     Ok(Json(CreateChannelResponse {
@@ -120,24 +126,23 @@ pub async fn get_channel_events(
             let queues = channel.queues();
             info!("Found {:?}", &queues);
             for queue_name in queues {
-                let queue = queue_pool
-                    .get_queue_mut(queue_name)
+                let data = queue_pool
+                    .dequeue_until(queue_name, timestamp + delta, delete)
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                info!("Queue Found {:?}", &queue);
-                let data = queue.dequeue_until(timestamp + delta, delete);
                 info!("Data Found {:?}", &data);
-                let dequeued_events: Result<Vec<_>, _> = data
+                let dequeued_events = data
                     .iter()
                     .map(|data| {
                         Ok(Event {
+                            timestamp: data.0,
                             queue_name: queue_name.to_owned(),
-                            data: std::str::from_utf8(data)
+                            data: std::str::from_utf8(&data.1)
                                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
                                 .to_owned(),
                         })
                     })
-                    .collect();
-                events.extend(dequeued_events?)
+                    .collect::<Result<Vec<_>, _>>()?;
+                events.extend(dequeued_events)
             }
 
             Ok(Json(GetChannelEventsResponse { events }))

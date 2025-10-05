@@ -5,9 +5,8 @@ use axum::{
     Router,
 };
 use log::info;
-use mora_channel::ChannelManager;
 use mora_core::result::{MoraError, MoraResult};
-use mora_queue::pool::QueuePool;
+use mora_queue::{channel_manager::ChannelManager, pool::QueuePool};
 use mora_storage::wal_file_storage::WalFileStorage;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;

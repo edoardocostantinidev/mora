@@ -9,7 +9,6 @@ default-run = "mora-server"
 config = "0.15.16"
 log = { workspace = true }
 mora-api = { workspace = true }
-mora-channel = { workspace = true }
 mora-core = { workspace = true }
 mora-queue = { workspace = true }
 opentelemetry = { workspace = true }

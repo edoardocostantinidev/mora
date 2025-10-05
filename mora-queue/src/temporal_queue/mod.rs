@@ -54,20 +54,21 @@ where
         }
     }
 
-    pub fn dequeue_until(&mut self, timestamp: u128, delete: bool) -> Vec<V> {
+    pub fn dequeue_until(&mut self, timestamp: u128, delete: bool) -> Vec<(u128, V)> {
         //todo: improve here using apposite data structure
-        let mut values: Vec<V> = vec![];
+        let mut values: Vec<(u128, V)> = vec![];
+        // this is really bad
         self.inner
             .clone()
             .take_while(|(k, _)| *k <= timestamp)
-            .map(|(_, v)| v)
-            .for_each(|v| {
+            .for_each(|pair| {
                 if delete {
                     self.len -= 1;
                     self.inner.dequeue(1);
                 }
-                values.push(v);
+                values.push(pair);
             });
+
         values
     }
 }
@@ -102,7 +103,7 @@ mod tests {
         tq.enqueue(3, 3)?;
         tq.enqueue(4, 4)?;
         let result = tq.dequeue_until(2, true);
-        assert_eq!(result, vec![1, 2]);
+        assert_eq!(result, vec![(1, 1), (2, 2)]);
         assert_eq!(tq.len, 2);
         Ok(())
     }

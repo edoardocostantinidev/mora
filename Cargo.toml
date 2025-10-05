@@ -13,7 +13,6 @@ members = [
 
 [workspace.dependencies]
 mora-core = { path = "./mora-core" }
-mora-channel = { path = "./mora-channel" }
 mora-queue = { path = "./mora-queue" }
 mora-api = { path = "./mora-api" }
 mora-server = { path = "./mora-server" }

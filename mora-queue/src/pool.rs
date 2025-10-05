@@ -8,9 +8,9 @@ use regex::Regex;
 
 use crate::temporal_queue::TemporalQueue;
 
-type Bytes = Vec<u8>;
-type QueueId = String;
-type EventId = [u8; 16];
+pub(crate) type Bytes = Vec<u8>;
+pub(crate) type QueueId = String;
+pub(crate) type EventId = u128;
 
 pub struct QueuePool<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> {
     queues: HashMap<QueueId, TemporalQueue<Bytes>>,
@@ -30,8 +30,7 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
             pool.queues
                 .insert(container.to_owned(), TemporalQueue::default());
             for (key, item) in pool.storage.get_all_items(&container)? {
-                pool.get_queue_mut(&container)?
-                    .enqueue(u128::from_le_bytes(key), item)?;
+                pool.get_queue_mut(&container)?.enqueue(key, item)?;
             }
         }
 
@@ -79,6 +78,18 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
             .collect())
     }
 
+    pub fn contains_queue(&self, id: &QueueId) -> bool {
+        self.queues.contains_key(id)
+    }
+
+    pub fn get_all_queues(&self) -> MoraResult<Vec<(String, &TemporalQueue<Bytes>)>> {
+        Ok(self
+            .queues
+            .keys()
+            .map(|k| (k.to_owned(), self.queues.get(k).unwrap()))
+            .collect())
+    }
+
     pub fn get_queues_mut(
         &mut self,
         pattern: Regex,
@@ -92,9 +103,8 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
         Ok(queues)
     }
 
-    pub fn enqueue(&mut self, id: &QueueId, timestamp: u128, value: Bytes) -> MoraResult<()> {
-        self.storage
-            .store_item(&id, &timestamp.to_le_bytes(), &value)?;
+    pub fn enqueue(&mut self, id: &QueueId, timestamp: EventId, value: Bytes) -> MoraResult<()> {
+        self.storage.store_item(&id, &timestamp, &value)?;
         self.get_queue_mut(id)?.enqueue(timestamp, value)?;
         Ok(())
     }
@@ -104,7 +114,14 @@ impl<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>> QueuePo
         id: &QueueId,
         timestamp: u128,
         delete: bool,
-    ) -> MoraResult<Vec<Bytes>> {
-        Ok(self.get_queue_mut(id)?.dequeue_until(timestamp, delete))
+    ) -> MoraResult<Vec<(EventId, Bytes)>> {
+        let dequeued = self.get_queue_mut(id)?.dequeue_until(timestamp, delete);
+        let sort_keys = dequeued.iter().map(|pair| pair.0).collect::<Vec<_>>();
+
+        if delete {
+            self.storage.delete_items(id, &sort_keys)?;
+        }
+
+        Ok(dequeued)
     }
 }

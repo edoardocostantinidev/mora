@@ -31,6 +31,12 @@ enum ItemDescriptor {
     Item = 1,
 }
 
+impl Into<u8> for ItemDescriptor {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
 impl From<&[u8]> for ItemDescriptor {
     fn from(value: &[u8]) -> Self {
         match value[0] {
@@ -52,7 +58,7 @@ impl WalFileStorage {
 
 const SORT_KEY_BYTES: usize = 16;
 const ITEM_DESCRIPTOR_BYTES: usize = 1;
-const ITEM_LENGTH_BYTES: usize = 4;
+const ITEM_LENGTH_BYTES: usize = 8;
 
 /// WAL file storage design notes
 ///
@@ -76,7 +82,7 @@ const ITEM_LENGTH_BYTES: usize = 4;
 impl Storage for WalFileStorage {
     type ContainerId = String;
 
-    type SortKey = [u8; SORT_KEY_BYTES];
+    type SortKey = u128;
 
     type Item = Vec<u8>;
 
@@ -232,16 +238,10 @@ impl Storage for WalFileStorage {
             )))?
             .get_mut();
 
+        let mut buffer = Vec::with_capacity(SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES);
+        insert_delete_item_op_to_buffer(&mut buffer, *item_sort_key);
         file_buffer
-            .write_all(
-                &[
-                    item_sort_key.to_vec(),
-                    vec![ItemDescriptor::Tombstone as u8],
-                ]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<u8>>(),
-            )
+            .write_all(&buffer)
             .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
 
         file_buffer
@@ -278,22 +278,15 @@ impl Storage for WalFileStorage {
             )))?
             .get_mut();
 
-        let to_be_written = [
-            item_sort_key.to_vec(),
-            vec![ItemDescriptor::Item as u8],
-            item.len().to_le_bytes()[..ITEM_LENGTH_BYTES].to_vec(),
-            item.to_vec(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<u8>>();
+        let mut buffer = Vec::new();
+        insert_add_item_op_to_buffer(&mut buffer, *item_sort_key, item);
 
         file_buffer
             .seek(std::io::SeekFrom::End(0))
             .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
 
         file_buffer
-            .write_all(&to_be_written)
+            .write_all(&buffer)
             .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
 
         file_buffer
@@ -316,39 +309,100 @@ impl Storage for WalFileStorage {
             .get_mut();
 
         let mut items = HashMap::new();
-        let mut buffer = [0_u8; SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES + ITEM_LENGTH_BYTES];
-        while let Ok(_) = file_buffer.read_exact(&mut buffer) {
+        let mut buffer = [0_u8; SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES];
+        let mut offset = 0;
+        while let Ok(_) = file_buffer
+            .seek(std::io::SeekFrom::Start(offset))
+            .and_then(|_| file_buffer.read_exact(&mut buffer))
+        {
             // read header frame into separate variables
             let sort_key = &buffer[..SORT_KEY_BYTES];
+            let mut sort_key_bytes_buf = [0; SORT_KEY_BYTES];
+            sort_key_bytes_buf.copy_from_slice(&sort_key);
+            let sort_key_u128 = u128::from_le_bytes(sort_key_bytes_buf);
+            dbg!("sort_key_u128: {:?}", sort_key_u128);
+
             let item_descriptor_bytes =
                 &buffer[SORT_KEY_BYTES..SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES];
+            dbg!("item_descriptor_bytes: {:?}", item_descriptor_bytes);
+            offset += buffer.len() as u64;
 
             match Into::<ItemDescriptor>::into(item_descriptor_bytes) {
                 ItemDescriptor::Item => {
-                    let item_length_bytes = &buffer[SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES
-                        ..SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES + ITEM_LENGTH_BYTES];
+                    let mut item_length_buffer = [0_u8; ITEM_LENGTH_BYTES];
+                    file_buffer
+                        .seek(std::io::SeekFrom::Start(offset))
+                        .and_then(|_| file_buffer.read_exact(&mut item_length_buffer))
+                        .map_err(|e| {
+                            MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                        })?;
+                    offset += item_length_buffer.len() as u64;
                     let item_length =
-                        u32::from_le_bytes(item_length_bytes.try_into().map_err(|_| {
+                        u64::from_le_bytes(item_length_buffer.try_into().map_err(|_| {
                             MoraError::StorageError(StorageError::ItemReadFailed(
                                 "invalid item length".to_string(),
                             ))
                         })?);
+                    dbg!("item_length: {:?}", item_length);
                     // read item into separate buffer
                     let mut item_buffer = vec![0_u8; item_length as usize];
-                    file_buffer.read_exact(&mut item_buffer).map_err(|e| {
-                        MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
-                    })?;
-                    let mut sort_key_bytes = [0; SORT_KEY_BYTES];
-                    sort_key_bytes.copy_from_slice(&sort_key);
-
-                    items.insert(sort_key_bytes, item_buffer);
+                    file_buffer
+                        .seek(std::io::SeekFrom::Start(offset))
+                        .and_then(|_| file_buffer.read_exact(&mut item_buffer))
+                        .map_err(|e| {
+                            MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                        })?;
+                    offset += item_buffer.len() as u64;
+                    dbg!("item_buffer: {:?}", &item_buffer);
+                    items.insert(sort_key_u128, item_buffer);
                 }
                 ItemDescriptor::Tombstone => {
-                    items.remove(sort_key);
+                    items.remove(&sort_key_u128);
                 }
             }
         }
 
         Ok(items)
     }
+
+    fn delete_items(
+        &mut self,
+        container_id: &Self::ContainerId,
+        item_sort_keys: &[Self::SortKey],
+    ) -> MoraResult<()> {
+        let file_buffer = self
+            .wals
+            .get_mut(container_id)
+            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
+                container_id.to_string(),
+            )))?
+            .get_mut();
+
+        let mut buffer = Vec::new();
+        item_sort_keys
+            .iter()
+            .for_each(|key| insert_delete_item_op_to_buffer(&mut buffer, *key));
+
+        file_buffer
+            .write_all(&buffer)
+            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+
+        file_buffer
+            .flush()
+            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+
+        Ok(())
+    }
+}
+
+fn insert_delete_item_op_to_buffer(buffer: &mut Vec<u8>, key: u128) {
+    buffer.extend_from_slice(&key.to_le_bytes());
+    buffer.push(ItemDescriptor::Tombstone as u8);
+}
+
+fn insert_add_item_op_to_buffer(buffer: &mut Vec<u8>, key: u128, item: &[u8]) {
+    buffer.extend_from_slice(&key.to_le_bytes());
+    buffer.push(ItemDescriptor::Item.into());
+    buffer.extend_from_slice(&item.len().to_le_bytes());
+    buffer.extend_from_slice(item);
 }

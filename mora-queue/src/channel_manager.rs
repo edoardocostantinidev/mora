@@ -1,17 +1,11 @@
-use mora_core::result::MoraError;
+use mora_core::{result::MoraError, traits::storage::Storage};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+use crate::pool::{Bytes, EventId, QueueId, QueuePool};
+
+#[derive(Default)]
 pub struct ChannelManager {
     channels: HashMap<String, Channel>,
-}
-
-impl ChannelManager {
-    pub fn new() -> Self {
-        Self {
-            channels: HashMap::<_, _>::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -53,8 +47,9 @@ impl Channel {
 }
 
 impl ChannelManager {
-    pub fn create_channel(
+    pub fn create_channel<T: Storage<ContainerId = QueueId, SortKey = EventId, Item = Bytes>>(
         &mut self,
+        queue_pool: &QueuePool<T>,
         queues: Vec<String>,
         buffer_size: usize,
         buffer_time: u128,
@@ -63,6 +58,12 @@ impl ChannelManager {
 
         while self.channels.contains_key(&channel_id) {
             channel_id = uuid::Uuid::new_v4().to_string();
+        }
+
+        for queue in &queues {
+            if !queue_pool.contains_queue(queue) {
+                return Err(MoraError::QueueNotFound(queue.clone()));
+            }
         }
 
         let channel = Channel {

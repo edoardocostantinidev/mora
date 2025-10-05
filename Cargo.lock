@@ -1282,7 +1282,6 @@ dependencies = [
  "chrono",
  "futures-util",
  "log",
- "mora-channel",
  "mora-core",
  "mora-queue",
  "mora-storage",
@@ -1291,17 +1290,6 @@ dependencies = [
  "serde",
  "tokio",
  "tower",
-]
-
-[[package]]
-name = "mora-channel"
-version = "0.1.0"
-dependencies = [
- "log",
- "mora-core",
- "regex",
- "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -1347,6 +1335,7 @@ dependencies = [
  "log",
  "mora-core",
  "regex",
+ "uuid",
 ]
 
 [[package]]
@@ -1356,7 +1345,6 @@ dependencies = [
  "config",
  "log",
  "mora-api",
- "mora-channel",
  "mora-core",
  "mora-queue",
  "opentelemetry",
