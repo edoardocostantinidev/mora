@@ -3,7 +3,6 @@ name = "mora-server"
 version = "0.1.0"
 edition = "2021"
 default-run = "mora-server"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 config = "0.15.16"

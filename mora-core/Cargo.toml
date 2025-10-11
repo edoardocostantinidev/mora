@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { version = "0.14.2" }

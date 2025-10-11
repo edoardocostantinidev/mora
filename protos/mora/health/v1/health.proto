@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package mora.health.v1;
+
+// Empty request for health check.
+message HealthCheckRequest {}
+
+// Represents the cluster's status data.
+message ClusterStatusData {
+    string version = 1;
+    bytes current_time_in_ns = 2;
+}
+
+// Represents the cluster's status.
+message HealthCheckResponse {
+    oneof status {
+        ClusterStatusData online = 1;
+        string degraded = 2;
+        Offline offline = 3;
+    }
+}
+
+// Empty message to represent the Offline state. Which technically makes no sense cause you wouldn't get a response would ya?
+message Offline {}
+
+service HealthService {
+    // Returns the current cluster status.
+    rpc GetClusterStatus (HealthCheckRequest) returns (HealthCheckResponse);
+}

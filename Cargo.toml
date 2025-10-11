@@ -1,4 +1,5 @@
 
+
 [workspace]
 resolver = "2"
 members = [
@@ -9,6 +10,7 @@ members = [
     "mora-client",
     "mora-cli",
     "mora-storage",
+    "mora-proto",
 ]
 
 [workspace.dependencies]
@@ -19,8 +21,9 @@ mora-server = { path = "./mora-server" }
 mora-client = { path = "./mora-client" }
 mora-cli = { path = "./mora-cli" }
 mora-storage = { path = "./mora-storage" }
+mora-proto = { path = "./mora-proto" }
 
-axum = { version = "0.8" }
+axum = { version = "0.8.6" }
 axum-macros = { version = "0.5" }
 chrono = { version = "0.4.30" }
 color-eyre = "0.6.3"
@@ -40,6 +43,7 @@ opentelemetry-otlp = { version = "0.30", features = [
 opentelemetry-resource-detectors = "0.9"
 opentelemetry_sdk = { version = "0.30", features = ["rt-tokio"] }
 opentelemetry-stdout = "0.30"
+prost = { version = "0.14.1" }
 ratatui = { version = "0.29.0" }
 rand = "0.9.2"
 regex = { version = "1.11.2" }
@@ -55,6 +59,8 @@ thiserror = { version = "2.0.16" }
 tokio = { version = "1.47.1", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["full"] }
 tower = { version = "0.5.2" }
+tonic = { version = "0.14.2" }
+tonic-prost = { version = "0.14.2" }
 url = { version = "2.5.1" }
 uuid = { version = "1.18.1", features = [
     "v4",

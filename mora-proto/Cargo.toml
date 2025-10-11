@@ -1,0 +1,12 @@
+[package]
+name = "mora-proto"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[dependencies]
+tonic = { workspace = true }
+prost = { workspace = true }
+tonic-prost = { workspace = true }
+[build-dependencies]
+tonic-prost-build = { version = "0.14.2" }

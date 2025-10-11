@@ -17,7 +17,7 @@ async fn main() -> MoraResult<()> {
     color_eyre::install().map_err(handle_error)?;
     let terminal = ratatui::init();
 
-    let app_result = app::App::new(&mora_client).run(terminal).await;
+    let app_result = app::App::new(&mora_client.await?).run(terminal).await;
     ratatui::restore();
     app_result.map_err(handle_error)
 }

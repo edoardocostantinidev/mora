@@ -1,11 +1,17 @@
 use mora_core::{
     models::{
-        channels::ListChannelsResponse, connections::ConnectionsInfo, health::ClusterStatus,
+        channels::ListChannelsResponse,
+        connections::ConnectionsInfo,
+        health::{ClusterStatus, ClusterStatusData},
         queues::ListQueuesResponse,
     },
     result::{MoraError, MoraResult},
 };
 
+use mora_proto::health::{
+    self, health_check_response::Status, ClusterStatusData as ProtoClusterStatusData,
+    HealthCheckRequest,
+};
 use reqwest::Url;
 use url::ParseError;
 
@@ -16,17 +22,26 @@ pub struct MoraClient {
     base_url: String,
     port: u16,
     http_client: reqwest::Client,
+    health_client: health::health_service_client::HealthServiceClient<tonic::transport::Channel>,
     id_key: String,
 }
 
 impl MoraClient {
-    pub fn new(base_url: String, port: u16, id_key: String) -> Self {
-        Self {
+    pub async fn new(base_url: String, port: u16, id_key: String) -> MoraResult<Self> {
+        let channel = tonic::transport::Channel::from_shared(format!("http://{base_url}:{port}"))
+            .map_err(|e| MoraError::GenericError(format!("Invalid base URL: {e}")))?
+            .connect()
+            .await
+            .map_err(|e| MoraError::ConnectionError(format!("Failed to connect: {e}")))?;
+        let health_client = health::health_service_client::HealthServiceClient::new(channel);
+
+        Ok(Self {
             base_url,
             port,
             http_client: reqwest::Client::new(),
+            health_client,
             id_key,
-        }
+        })
     }
 
     pub fn build_url(&self, path: &str) -> MoraResult<Url> {
@@ -63,10 +78,30 @@ impl MoraClient {
     }
 
     pub async fn get_cluster_status(&self) -> MoraResult<ClusterStatus> {
-        let cluster_status = self.get_request::<ClusterStatus>("health").await?;
+        let cluster_status = self
+            .clone()
+            .health_client
+            .get_cluster_status(HealthCheckRequest {})
+            .await
+            .map_err(|e| MoraError::GenericError(e.to_string()))?
+            .into_inner()
+            .status;
 
         match cluster_status {
-            ClusterStatus::Online(_) => Ok(cluster_status),
+            Some(Status::Online(ProtoClusterStatusData {
+                current_time_in_ns: bytes,
+                version,
+            })) => {
+                let current_time_in_ns_bytes: [u8; 16] = bytes
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| MoraError::GenericError("Invalid ns time format".to_string()))?;
+                let current_time_in_ns = u128::from_le_bytes(current_time_in_ns_bytes);
+                Ok(ClusterStatus::Online(ClusterStatusData {
+                    current_time_in_ns,
+                    version,
+                }))
+            }
             _ => Ok(ClusterStatus::Offline),
         }
     }
