@@ -9,18 +9,16 @@ edition = "2021"
 mora-core = { workspace = true }
 mora-queue = { workspace = true }
 mora-storage = { workspace = true }
-mora-proto = { workspace = true }
 
 chrono = { workspace = true }
 futures-util = { workspace = true }
 log = { workspace = true }
+axum = { workspace = true }
+axum-macros = { workspace = true }
 opentelemetry = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }
-tonic = { workspace = true }
-tonic-reflection = { workspace = true }
-prost = { workspace = true }
 
 [dev-dependencies]

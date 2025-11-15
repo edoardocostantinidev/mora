@@ -1,19 +1,32 @@
+use axum::{
+    http::StatusCode,
+    middleware,
+    routing::{delete, get, post},
+    Router,
+};
 use log::info;
 use mora_core::result::{MoraError, MoraResult};
 use mora_queue::{channel_manager::ChannelManager, pool::QueuePool};
 use mora_storage::wal_file_storage::WalFileStorage;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
-use crate::connections::Connections;
+use crate::{connections::Connections, middlewares::connections::ConnectionMiddleware};
 
 pub(crate) mod connections;
-pub(crate) mod grpc;
+pub(crate) mod middlewares;
+pub(crate) mod routes;
 
 pub type QueuePoolState = Arc<Mutex<QueuePool<WalFileStorage>>>;
 pub type ChannelManagerState = Arc<Mutex<ChannelManager>>;
 pub type ConnectionsState = Arc<Mutex<Connections>>;
+
+#[derive(Clone)]
+pub struct AppState {
+    queue_pool: QueuePoolState,
+    channel_manager: ChannelManagerState,
+    connections: ConnectionsState,
+}
 
 pub struct MoraApi {
     port: u16,
@@ -23,74 +36,71 @@ impl MoraApi {
     pub fn new(port: u16) -> Self {
         MoraApi { port }
     }
-
-    pub async fn start_grpc_server(
+    pub async fn start_listening(
         &self,
         channel_manager: Arc<Mutex<ChannelManager>>,
         queue_pool: Arc<Mutex<QueuePool<WalFileStorage>>>,
     ) -> MoraResult<()> {
-        use mora_proto::{
-            channels::channel_service_server::ChannelServiceServer,
-            connections::connection_service_server::ConnectionServiceServer,
-            events::event_service_server::EventServiceServer,
-            health::health_service_server::HealthServiceServer,
-            queues::queue_service_server::QueueServiceServer,
+        let connections = Arc::new(Mutex::new(Connections::default()));
+        let app_state = AppState {
+            channel_manager,
+            queue_pool,
+            connections: connections.clone(),
         };
 
-        let connections = Arc::new(Mutex::new(Connections::default()));
-
-        // Spawn connection cleanup task
-        let connections_clone = connections.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(1));
             loop {
                 interval.tick().await;
-                connections_clone
-                    .clone()
-                    .lock()
-                    .await
-                    .purge_old_connections();
+                connections.clone().lock().await.purge_old_connections();
             }
         });
 
-        let health_service = grpc::health::HealthServiceImpl;
-        let queue_service = grpc::queues::QueueServiceImpl {
-            queue_pool: queue_pool.clone(),
-        };
-        let channel_service = grpc::channels::ChannelServiceImpl {
-            channel_manager: channel_manager.clone(),
-            queue_pool: queue_pool.clone(),
-        };
-        let event_service = grpc::events::EventServiceImpl {
-            queue_pool: queue_pool.clone(),
-        };
-        let connection_service = grpc::connections::ConnectionServiceImpl {
-            connections: connections.clone(),
-        };
-
-        let reflection_service = tonic_reflection::server::Builder::configure()
-            .register_encoded_file_descriptor_set(mora_proto::FILE_DESCRIPTOR_SET)
-            .include_reflection_service(true)
-            .build_v1()
-            .unwrap();
-
-        let addr: std::net::SocketAddr = format!("0.0.0.0:{}", self.port)
+        let app = Router::new()
+            .route("/health", get(routes::health::get))
+            .route("/queues", get(routes::queues::list_queues))
+            .route("/queues/{queue_id}", get(routes::queues::get_queue))
+            .route("/queues", post(routes::queues::create_queue))
+            .route("/queues/{queue_id}", delete(routes::queues::delete_queue))
+            .route("/events", post(routes::events::schedule_event))
+            .route("/channels", post(routes::channels::create_channel))
+            .route("/channels", get(routes::channels::list_channels))
+            .route("/channels/{channel_id}", get(routes::channels::get_channel))
+            .route(
+                "/channels/{channel_id}",
+                delete(routes::channels::delete_channel),
+            )
+            .route(
+                "/channels/{channel_id}/events",
+                get(routes::channels::get_channel_events),
+            )
+            .route(
+                "/connections/info",
+                get(routes::connections::get_connections_info),
+            )
+            .route_layer(middleware::from_extractor_with_state::<
+                ConnectionMiddleware,
+                AppState,
+            >(app_state.clone()))
+            .with_state(app_state);
+        let addr: &SocketAddr = &format!("0.0.0.0:{}", self.port)
             .parse()
             .map_err(|e| MoraError::ApiError(format!("error parsing address: {e}")))?;
+        info!("Starting API Server");
 
-        info!("Starting gRPC Server on {}", addr);
-
-        tonic::transport::Server::builder()
-            .add_service(HealthServiceServer::new(health_service))
-            .add_service(QueueServiceServer::new(queue_service))
-            .add_service(ChannelServiceServer::new(channel_service))
-            .add_service(EventServiceServer::new(event_service))
-            .add_service(ConnectionServiceServer::new(connection_service))
-            .add_service(reflection_service)
-            .serve(addr)
+        let listener = tokio::net::TcpListener::bind(addr)
             .await
-            .map_err(|e| MoraError::ApiError(format!("error serving gRPC: {e}")))?;
+            .map_err(|e| MoraError::ApiError(format!("error binding listener: {e}")))?;
+        let service = app.into_make_service_with_connect_info::<SocketAddr>();
+
+        axum::serve(listener, service)
+            .await
+            .map_err(|e| MoraError::ApiError(format!("error serving: {e}")))?;
 
         Ok(())
     }
+}
+
+pub(crate) fn handle_mora_error(error: MoraError) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
