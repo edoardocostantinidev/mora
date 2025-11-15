@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package mora.connections.v1;
+
+// Empty request for getting connections info.
+message GetConnectionsInfoRequest {}
+
+// Response containing connection information.
+message ConnectionsInfoResponse {
+    uint64 clients_connected = 1;
+}
+
+service ConnectionService {
+    // Get information about active connections.
+    rpc GetConnectionsInfo (GetConnectionsInfoRequest) returns (ConnectionsInfoResponse);
+}

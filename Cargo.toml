@@ -61,6 +61,7 @@ tokio-stream = { version = "0.1.17", features = ["full"] }
 tower = { version = "0.5.2" }
 tonic = { version = "0.14.2" }
 tonic-prost = { version = "0.14.2" }
+tonic-reflection = { version = "0.14.2", features = ["server"] }
 url = { version = "2.5.1" }
 uuid = { version = "1.18.1", features = [
     "v4",

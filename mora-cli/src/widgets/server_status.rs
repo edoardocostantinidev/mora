@@ -21,12 +21,8 @@ pub struct ServerStatusWidget {
 
 impl ServerStatusWidget {
     pub fn new(mora_client: &MoraClient) -> Self {
-        let url = mora_client
-            .build_url("health")
-            .map(|u| u.to_string())
-            .unwrap_or_else(|_| "Invalid URL".to_string());
-
-        let initial_state = ServerStatusState::new(url);
+        // Since we're using gRPC now, we don't need to build URLs
+        let initial_state = ServerStatusState::new("gRPC".to_string());
 
         Self {
             mora_client: mora_client.clone(),

@@ -30,8 +30,9 @@ impl Server {
         let channel_manager_for_api = channel_manager.clone();
         let queue_pool_for_api = queue_pool.clone();
 
+        // Start gRPC server
         tasks.spawn(async move {
-            api.start_listening(channel_manager_for_api, queue_pool_for_api)
+            api.start_grpc_server(channel_manager_for_api, queue_pool_for_api)
                 .await
         });
 
