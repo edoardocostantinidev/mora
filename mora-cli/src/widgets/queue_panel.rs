@@ -235,13 +235,21 @@ impl Widget for &QueuePanelWidget {
                                     queue.id,
                                     queue.pending_events_count
                                 );
-                                let (bg, fg) = if idx == state.selected_index {
-                                    (ratatui::style::Color::White, ratatui::style::Color::Black)
+                                let (prefix, bg, fg) = if idx == state.selected_index {
+                                    (
+                                        "*",
+                                        ratatui::style::Color::White,
+                                        ratatui::style::Color::Black,
+                                    )
                                 } else {
-                                    (ratatui::style::Color::Black, ratatui::style::Color::White)
+                                    (
+                                        " ",
+                                        ratatui::style::Color::Black,
+                                        ratatui::style::Color::White,
+                                    )
                                 };
 
-                                ListItem::new(text).bg(bg).fg(fg)
+                                ListItem::new(format!("{prefix}{text}")).bg(bg).fg(fg)
                             })
                             .collect::<Vec<ListItem>>(),
                         None,
