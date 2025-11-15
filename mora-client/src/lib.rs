@@ -1,7 +1,6 @@
 use mora_core::{
     models::{
         channels::ListChannelsResponse,
-        connections::ConnectionsInfo,
         health::{ClusterStatus, ClusterStatusData},
         queues::ListQueuesResponse,
     },
@@ -10,9 +9,6 @@ use mora_core::{
 
 use mora_proto::{
     channels::{channel_service_client::ChannelServiceClient, ListChannelsRequest},
-    connections::{
-        connection_service_client::ConnectionServiceClient, GetConnectionsInfoRequest,
-    },
     health::{
         health_check_response::Status, health_service_client::HealthServiceClient,
         ClusterStatusData as ProtoClusterStatusData, HealthCheckRequest,
@@ -25,7 +21,6 @@ pub struct MoraClient {
     health_client: HealthServiceClient<tonic::transport::Channel>,
     queue_client: QueueServiceClient<tonic::transport::Channel>,
     channel_client: ChannelServiceClient<tonic::transport::Channel>,
-    connection_client: ConnectionServiceClient<tonic::transport::Channel>,
 }
 
 impl MoraClient {
@@ -38,14 +33,12 @@ impl MoraClient {
 
         let health_client = HealthServiceClient::new(channel.clone());
         let queue_client = QueueServiceClient::new(channel.clone());
-        let channel_client = ChannelServiceClient::new(channel.clone());
-        let connection_client = ConnectionServiceClient::new(channel);
+        let channel_client = ChannelServiceClient::new(channel);
 
         Ok(Self {
             health_client,
             queue_client,
             channel_client,
-            connection_client,
         })
     }
 
@@ -76,20 +69,6 @@ impl MoraClient {
             }
             _ => Ok(ClusterStatus::Offline),
         }
-    }
-
-    pub async fn get_connections_info(&self) -> MoraResult<ConnectionsInfo> {
-        let response = self
-            .clone()
-            .connection_client
-            .get_connections_info(GetConnectionsInfoRequest {})
-            .await
-            .map_err(|e| MoraError::GenericError(e.to_string()))?
-            .into_inner();
-
-        Ok(ConnectionsInfo {
-            clients_connected: response.clients_connected as usize,
-        })
     }
 
     pub async fn get_queues(&self) -> MoraResult<ListQueuesResponse> {

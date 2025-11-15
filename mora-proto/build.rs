@@ -10,7 +10,6 @@ fn main() {
                 "../protos/mora/queues/v1/queues.proto",
                 "../protos/mora/channels/v1/channels.proto",
                 "../protos/mora/events/v1/events.proto",
-                "../protos/mora/connections/v1/connections.proto",
             ],
             &["../protos/"],
         )

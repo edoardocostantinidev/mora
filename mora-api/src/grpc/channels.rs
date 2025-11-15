@@ -67,7 +67,6 @@ impl ChannelService for ChannelServiceImpl {
                     size: channel.buffer_size() as u64,
                     time: channel.buffer_time() as u64,
                 }),
-                msec_from_last_op: channel.msec_from_last_op() as u64,
             })),
         }
     }
@@ -79,9 +78,9 @@ impl ChannelService for ChannelServiceImpl {
         debug!("gRPC Received create_channel request");
         let req = request.into_inner();
         let pool = self.queue_pool.lock().await;
-        let buffer_options = req.buffer_options.ok_or(Status::invalid_argument(
-            "buffer_options is required",
-        ))?;
+        let buffer_options = req
+            .buffer_options
+            .ok_or(Status::invalid_argument("buffer_options is required"))?;
 
         let channel = self
             .channel_manager
@@ -153,7 +152,7 @@ impl ChannelService for ChannelServiceImpl {
                         .iter()
                         .map(|data| {
                             Ok(Event {
-                                timestamp: data.0.to_le_bytes().to_vec(),
+                                timestamp: data.0.to_string(),
                                 queue_name: queue_name.to_owned(),
                                 data: std::str::from_utf8(&data.1)
                                     .map_err(|e| Status::internal(e.to_string()))?

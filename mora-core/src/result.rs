@@ -44,10 +44,14 @@ pub enum StorageError {
     DirectoryReadFailed(String),
     #[error("file read failed: `{0}`")]
     FileReadFailed(String),
+    #[error("file write failed: `{0}`")]
+    FileWriteFailed(String),
     #[error("item read failed: `{0}`")]
     ItemReadFailed(String),
     #[error("item not found: `{0}`")]
     ItemNotFound(String),
     #[error("item write failed: `{0}`")]
     ItemWriteFailed(String),
+    #[error("corrupted data: `{0}`")]
+    CorruptedData(String),
 }

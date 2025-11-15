@@ -28,6 +28,7 @@ axum-macros = { version = "0.5" }
 chrono = { version = "0.4.30" }
 color-eyre = "0.6.3"
 config = { version = "0.15.16" }
+crc32fast = { version = "1.4" }
 crossterm = "0.29.0"
 fsst-rs = { version = "0.5.3" }
 futures-util = { version = "0.3.31" }

@@ -10,7 +10,7 @@ message RecurringOptions {
 
 // Rules for scheduling an event.
 message ScheduleRule {
-    bytes schedule_for = 1; // u128 timestamp as bytes (16 bytes)
+    string schedule_for = 1; // u128 timestamp as string (16 bytes)
     string queue = 2;
     optional RecurringOptions recurring_options = 3;
 }
@@ -18,7 +18,7 @@ message ScheduleRule {
 // Request to schedule one or more events.
 message ScheduleEventRequest {
     string data = 1;
-    repeated ScheduleRule schedule_rules = 2;
+    ScheduleRule schedule_rule = 2;
 }
 
 // Empty response after scheduling events.

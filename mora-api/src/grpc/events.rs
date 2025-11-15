@@ -20,31 +20,28 @@ impl EventService for EventServiceImpl {
         let req = request.into_inner();
         let binary_data = req.data.into_bytes();
 
-        for rule in req.schedule_rules {
-            let queue_name = rule.queue.clone();
-            let schedule_for_bytes: [u8; 16] = rule
-                .schedule_for
-                .as_slice()
-                .try_into()
-                .map_err(|_| Status::invalid_argument("Invalid schedule_for timestamp"))?;
-            let schedule_for = u128::from_le_bytes(schedule_for_bytes);
+        let rule = req.schedule_rule.as_ref().unwrap();
+        let queue_name = rule.queue.clone();
+        let schedule_for = rule
+            .schedule_for
+            .parse::<u128>()
+            .map_err(|_| Status::invalid_argument("Invalid schedule_for timestamp"))?;
 
-            let mut queue_pool = self.queue_pool.lock().await;
-            if let Err(e) = queue_pool.get_queue_mut(&queue_name) {
-                if let MoraError::QueueNotFound(..) = e {
-                    return Err(Status::not_found(format!(
-                        "{} queue does not exist",
-                        &queue_name
-                    )));
-                } else {
-                    return Err(Status::internal(e.to_string()));
-                }
+        let mut queue_pool = self.queue_pool.lock().await;
+        if let Err(e) = queue_pool.get_queue_mut(&queue_name) {
+            if let MoraError::QueueNotFound(..) = e {
+                return Err(Status::not_found(format!(
+                    "{} queue does not exist",
+                    &queue_name
+                )));
+            } else {
+                return Err(Status::internal(e.to_string()));
             }
-
-            queue_pool
-                .enqueue(&queue_name, schedule_for, binary_data.clone())
-                .map_err(|e| Status::internal(e.to_string()))?;
         }
+
+        queue_pool
+            .enqueue(&queue_name, schedule_for, binary_data.clone())
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(ScheduleEventResponse {}))
     }

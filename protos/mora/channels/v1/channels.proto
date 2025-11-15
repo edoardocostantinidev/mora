@@ -34,7 +34,7 @@ message GetChannelResponse {
     string channel_id = 1;
     repeated string queues = 2;
     BufferOptions buffer_options = 3;
-    uint64 msec_from_last_op = 4;
+    
 }
 
 // Request to create a new channel.
@@ -58,7 +58,7 @@ message DeleteChannelResponse {}
 
 // Represents an event in a queue.
 message Event {
-    bytes timestamp = 1; // u128 as bytes (16 bytes)
+    string timestamp = 1; // u128 as string (16 bytes)
     string queue_name = 2;
     string data = 3;
 }

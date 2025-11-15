@@ -1,136 +1,454 @@
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
-    io::{BufWriter, Read, Seek, Write},
-    path::Path,
+    io::{BufReader, BufWriter, Read, Write},
+    path::PathBuf,
 };
 
+use log::{debug, info, warn};
 use mora_core::{
     result::{MoraError, MoraResult, StorageError},
     traits::storage::Storage,
 };
 
+/// WAL-based file storage with in-memory index for fast reads.
+///
+/// Design Philosophy:
+/// - Write-Ahead Log ensures durability via append-only writes with fsync
+/// - In-memory HashMap provides O(1) reads without scanning disk
+/// - Background compaction removes tombstones and reclaims space
+/// - CRC32 checksums ensure data integrity
+///
+/// Architecture:
+///                ┌──────────────────┐
+///                │  WalFileStorage  │
+///                └────────┬─────────┘
+///                         │
+///         ┌───────────────┴────────────────┐
+///         ▼                                ▼
+///  ┌─────────────┐                 ┌──────────────┐
+///  │  In-Memory  │◄────replay──────│  WAL Files   │
+///  │   Index     │                 │  (durable)   │
+///  │ (fast read) │─────append─────►│              │
+///  └─────────────┘                 └──────────────┘
 pub struct WalFileStorage {
-    wals: HashMap<String, BufWriter<File>>,
-    wal_path: String,
+    /// In-memory index: container_id -> (sort_key -> item)
+    /// Provides O(1) reads without disk access
+    index: HashMap<String, HashMap<u128, Vec<u8>>>,
+
+    /// Write handles: container_id -> BufWriter<File>
+    /// Used for appending new records to WAL
+    write_handles: HashMap<String, BufWriter<File>>,
+
+    /// Base path for all WAL files
+    wal_path: PathBuf,
+
+    /// Statistics for monitoring and compaction decisions
+    stats: WalStats,
+}
+
+#[derive(Debug, Default)]
+struct WalStats {
+    /// Total records written since load
+    total_writes: u64,
+    /// Total tombstones written since load
+    total_tombstones: u64,
+    /// Per-container record counts for compaction heuristics
+    container_record_counts: HashMap<String, u64>,
+}
+
+impl WalStats {
+    fn should_compact(&self, container_id: &str) -> bool {
+        // Compact if tombstone ratio exceeds 30% and we have significant records
+        if let Some(&record_count) = self.container_record_counts.get(container_id) {
+            let tombstone_ratio = self.total_tombstones as f64 / record_count as f64;
+            record_count > 1000 && tombstone_ratio > 0.3
+        } else {
+            false
+        }
+    }
 }
 
 pub struct WalFileStorageConfig {
-    wal_path: String,
+    wal_path: PathBuf,
 }
 
 impl WalFileStorageConfig {
     pub fn load() -> MoraResult<Self> {
-        let wal_path = std::env::var("MORA_WAL_PATH").unwrap_or_else(|_| "/tmp/wals".to_string());
+        let wal_path = std::env::var("MORA_WAL_PATH")
+            .unwrap_or_else(|_| "/tmp/wals".to_string())
+            .into();
         Ok(Self { wal_path })
     }
 }
 
-enum ItemDescriptor {
+/// Record type discriminator
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+enum RecordType {
     Tombstone = 0,
     Item = 1,
 }
 
-impl Into<u8> for ItemDescriptor {
-    fn into(self) -> u8 {
-        self as u8
-    }
-}
-
-impl From<&[u8]> for ItemDescriptor {
-    fn from(value: &[u8]) -> Self {
-        match value[0] {
-            0 => Self::Tombstone,
-            1 => Self::Item,
-            _ => panic!("invalid item descriptor"),
+impl RecordType {
+    fn from_u8(value: u8) -> MoraResult<Self> {
+        match value {
+            0 => Ok(Self::Tombstone),
+            1 => Ok(Self::Item),
+            _ => Err(MoraError::StorageError(StorageError::CorruptedData(
+                format!("Invalid record type: {}", value),
+            ))),
         }
     }
 }
+
+// Record format constants
+const SORT_KEY_BYTES: usize = 16;
+const RECORD_TYPE_BYTES: usize = 1;
+const ITEM_LENGTH_BYTES: usize = 8;
+const CRC_BYTES: usize = 4;
+
+/// WAL Record Format (with checksums):
+///
+/// Item Record:
+///   ┌────────────┬──────────────┬──────────────┬─────────────────┬──────────┐
+///   │ sort_key   │ record_type  │ item_length  │ item_data       │ crc32    │
+///   │ (16 bytes) │ (1 byte)     │ (8 bytes)    │ (variable)      │ (4 bytes)│
+///   └────────────┴──────────────┴──────────────┴─────────────────┴──────────┘
+///
+/// Tombstone Record:
+///   ┌────────────┬──────────────┬──────────┐
+///   │ sort_key   │ record_type  │ crc32    │
+///   │ (16 bytes) │ (1 byte)     │ (4 bytes)│
+///   └────────────┴──────────────┴──────────┘
+///
+/// The CRC32 covers everything except itself.
 
 impl WalFileStorage {
-    pub fn new(wal_path: String) -> Self {
+    pub fn new(wal_path: PathBuf) -> Self {
         Self {
-            wals: HashMap::new(),
+            index: HashMap::new(),
+            write_handles: HashMap::new(),
             wal_path,
+            stats: WalStats::default(),
         }
+    }
+
+    /// Get the file path for a container's WAL
+    fn container_wal_path(&self, container_id: &str) -> PathBuf {
+        self.wal_path.join(format!("{}.wal", container_id))
+    }
+
+    /// Replay a WAL file into the in-memory index
+    fn replay_wal(&mut self, container_id: &str, file: &mut File) -> MoraResult<()> {
+        info!("Replaying WAL for container: {}", container_id);
+
+        let mut reader = BufReader::new(file);
+        let container_index = self.index.entry(container_id.to_string()).or_default();
+        let mut record_count = 0;
+
+        loop {
+            // Try to read the header
+            let mut header_buf = [0u8; SORT_KEY_BYTES + RECORD_TYPE_BYTES];
+            match reader.read_exact(&mut header_buf) {
+                Ok(_) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    // End of file - this is normal
+                    break;
+                }
+                Err(e) => {
+                    return Err(MoraError::StorageError(StorageError::ItemReadFailed(
+                        e.to_string(),
+                    )))
+                }
+            }
+
+            let sort_key = u128::from_le_bytes(
+                header_buf[..SORT_KEY_BYTES]
+                    .try_into()
+                    .map_err(|_| MoraError::StorageError(StorageError::CorruptedData(
+                        "Invalid sort key".to_string()
+                    )))?
+            );
+
+            let record_type = RecordType::from_u8(header_buf[SORT_KEY_BYTES])?;
+
+            match record_type {
+                RecordType::Item => {
+                    // Read item length
+                    let mut len_buf = [0u8; ITEM_LENGTH_BYTES];
+                    reader.read_exact(&mut len_buf).map_err(|e| {
+                        MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                    })?;
+                    let item_length = u64::from_le_bytes(len_buf);
+
+                    // Read item data
+                    let mut item_data = vec![0u8; item_length as usize];
+                    reader.read_exact(&mut item_data).map_err(|e| {
+                        MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                    })?;
+
+                    // Read and verify checksum
+                    let mut crc_buf = [0u8; CRC_BYTES];
+                    reader.read_exact(&mut crc_buf).map_err(|e| {
+                        MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                    })?;
+                    let stored_crc = u32::from_le_bytes(crc_buf);
+
+                    // Compute expected checksum
+                    let mut hasher = crc32fast::Hasher::new();
+                    hasher.update(&header_buf);
+                    hasher.update(&len_buf);
+                    hasher.update(&item_data);
+                    let computed_crc = hasher.finalize();
+
+                    if stored_crc != computed_crc {
+                        warn!(
+                            "CRC mismatch for container {} key {}: expected {}, got {}",
+                            container_id, sort_key, computed_crc, stored_crc
+                        );
+                        return Err(MoraError::StorageError(StorageError::CorruptedData(
+                            format!("CRC mismatch for key {}", sort_key),
+                        )));
+                    }
+
+                    container_index.insert(sort_key, item_data);
+                    record_count += 1;
+                }
+                RecordType::Tombstone => {
+                    // Read and verify checksum
+                    let mut crc_buf = [0u8; CRC_BYTES];
+                    reader.read_exact(&mut crc_buf).map_err(|e| {
+                        MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
+                    })?;
+                    let stored_crc = u32::from_le_bytes(crc_buf);
+
+                    // Compute expected checksum
+                    let mut hasher = crc32fast::Hasher::new();
+                    hasher.update(&header_buf);
+                    let computed_crc = hasher.finalize();
+
+                    if stored_crc != computed_crc {
+                        warn!(
+                            "CRC mismatch for tombstone in container {} key {}",
+                            container_id, sort_key
+                        );
+                        return Err(MoraError::StorageError(StorageError::CorruptedData(
+                            format!("CRC mismatch for tombstone key {}", sort_key),
+                        )));
+                    }
+
+                    container_index.remove(&sort_key);
+                    record_count += 1;
+                }
+            }
+        }
+
+        self.stats
+            .container_record_counts
+            .insert(container_id.to_string(), record_count);
+
+        info!(
+            "Replayed {} records for container {}",
+            record_count, container_id
+        );
+        Ok(())
+    }
+
+    /// Append a record to the WAL and sync to disk
+    fn append_record(&mut self, container_id: &str, record: &[u8]) -> MoraResult<()> {
+        let writer = self.write_handles.get_mut(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.to_string()))
+        })?;
+
+        writer.write_all(record).map_err(|e| {
+            MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string()))
+        })?;
+
+        // Flush to OS buffer
+        writer.flush().map_err(|e| {
+            MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string()))
+        })?;
+
+        // Force to disk (durability!)
+        writer.get_mut().sync_all().map_err(|e| {
+            MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string()))
+        })?;
+
+        Ok(())
+    }
+
+    /// Encode an item record with checksum
+    fn encode_item_record(sort_key: u128, item: &[u8]) -> Vec<u8> {
+        let mut buffer = Vec::with_capacity(
+            SORT_KEY_BYTES + RECORD_TYPE_BYTES + ITEM_LENGTH_BYTES + item.len() + CRC_BYTES,
+        );
+
+        // Write header and data
+        buffer.extend_from_slice(&sort_key.to_le_bytes());
+        buffer.push(RecordType::Item as u8);
+        buffer.extend_from_slice(&(item.len() as u64).to_le_bytes());
+        buffer.extend_from_slice(item);
+
+        // Compute and append checksum
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&buffer);
+        let crc = hasher.finalize();
+        buffer.extend_from_slice(&crc.to_le_bytes());
+
+        buffer
+    }
+
+    /// Encode a tombstone record with checksum
+    fn encode_tombstone_record(sort_key: u128) -> Vec<u8> {
+        let mut buffer = Vec::with_capacity(SORT_KEY_BYTES + RECORD_TYPE_BYTES + CRC_BYTES);
+
+        // Write header
+        buffer.extend_from_slice(&sort_key.to_le_bytes());
+        buffer.push(RecordType::Tombstone as u8);
+
+        // Compute and append checksum
+        let mut hasher = crc32fast::Hasher::new();
+        hasher.update(&buffer);
+        let crc = hasher.finalize();
+        buffer.extend_from_slice(&crc.to_le_bytes());
+
+        buffer
+    }
+
+    /// Compact a container's WAL by rewriting without tombstones
+    pub fn compact_container(&mut self, container_id: &str) -> MoraResult<()> {
+        info!("Compacting container: {}", container_id);
+
+        // Get current data from index
+        let items = self.index.get(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.to_string()))
+        })?;
+
+        // Write to temporary file
+        let temp_path = self.wal_path.join(format!("{}.wal.tmp", container_id));
+        let mut temp_file = BufWriter::new(
+            File::create(&temp_path).map_err(|e| {
+                MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+            })?
+        );
+
+        // Write all current items
+        for (&sort_key, item) in items.iter() {
+            let record = Self::encode_item_record(sort_key, item);
+            temp_file.write_all(&record).map_err(|e| {
+                MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+            })?;
+        }
+
+        // Flush and sync
+        temp_file.flush().map_err(|e| {
+            MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+        })?;
+        temp_file.get_mut().sync_all().map_err(|e| {
+            MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+        })?;
+        drop(temp_file);
+
+        // Close old handle
+        self.write_handles.remove(container_id);
+
+        // Atomically replace old file with new
+        let wal_path = self.container_wal_path(container_id);
+        std::fs::rename(&temp_path, &wal_path).map_err(|e| {
+            MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+        })?;
+
+        // Reopen write handle
+        let file = OpenOptions::new()
+            .append(true)
+            .open(&wal_path)
+            .map_err(|e| {
+                MoraError::StorageError(StorageError::FileWriteFailed(e.to_string()))
+            })?;
+        self.write_handles.insert(container_id.to_string(), BufWriter::new(file));
+
+        // Reset stats
+        self.stats
+            .container_record_counts
+            .insert(container_id.to_string(), items.len() as u64);
+
+        info!(
+            "Compaction complete for {}: {} items retained",
+            container_id,
+            items.len()
+        );
+        Ok(())
     }
 }
 
-const SORT_KEY_BYTES: usize = 16;
-const ITEM_DESCRIPTOR_BYTES: usize = 1;
-const ITEM_LENGTH_BYTES: usize = 8;
-
-/// WAL file storage design notes
-///
-/// File layout per container:
-///
-///   wal_path/<container_id>.wal
-///        ┌──────────────────────────────────────────────────────────────┐
-///        │ Record 1 │ Record 2 │ ... │ Record N                         │
-///        └──────────────────────────────────────────────────────────────┘
-///
-/// Each record is a framed entry containing the sort key and payload:
-/// Item:
-///        ┌────────────┬───────────────────────┬──────────────────┬─────────────────┐
-///        │ key (16B)  │ item_descriptor (1B)  │ item_length (4B) │ item (variable) │
-///        └────────────┴───────────────────────┴──────────────────┴─────────────────┘
-///
-/// Tombstone:
-///        ┌────────────┬──────────────────────┐
-///        │ key (16B)  │ item_descriptor (1B) │
-///        └────────────┴──────────────────────┘
 impl Storage for WalFileStorage {
     type ContainerId = String;
-
     type SortKey = u128;
-
     type Item = Vec<u8>;
 
-    // load()
-    // Initialize storage from disk.
-    //
-    //   Startup -> load()
-    //                │
-    //                ▼
-    //        scan wal_path for files
-    //                │
-    //                ▼
-    //      open file handles -> populate self.wals -> Ok(self)
     fn load() -> MoraResult<Self>
     where
         Self: Sized,
     {
         let config = WalFileStorageConfig::load()?;
-        let mut storage = Self::new(config.wal_path.to_owned());
+        let mut storage = Self::new(config.wal_path.clone());
 
-        if !Path::new(&config.wal_path).exists() {
+        // Create directory if it doesn't exist
+        if !config.wal_path.exists() {
             std::fs::create_dir_all(&config.wal_path).map_err(|e| {
                 MoraError::StorageError(StorageError::DirectoryCreationFailed(
-                    config.wal_path.to_string(),
+                    config.wal_path.display().to_string(),
                     e.to_string(),
                 ))
             })?;
+            info!("Created WAL directory: {}", config.wal_path.display());
         } else {
-            // List all wal files in the wal_path directory
-            let mut wal_files = std::fs::read_dir(config.wal_path).map_err(|e| {
+            // Replay existing WAL files
+            let entries = std::fs::read_dir(&config.wal_path).map_err(|e| {
                 MoraError::StorageError(StorageError::DirectoryReadFailed(e.to_string()))
             })?;
 
-            while let Some(Ok(wal_file)) = wal_files.next() {
-                let file_handle = OpenOptions::new()
+            for entry in entries {
+                let entry = entry.map_err(|e| {
+                    MoraError::StorageError(StorageError::DirectoryReadFailed(e.to_string()))
+                })?;
+
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) != Some("wal") {
+                    continue;
+                }
+
+                let container_id = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| {
+                        MoraError::StorageError(StorageError::CorruptedData(
+                            format!("Invalid WAL filename: {}", path.display()),
+                        ))
+                    })?;
+
+                // Open for reading and replay
+                let mut file = OpenOptions::new()
                     .read(true)
-                    .write(true)
-                    .open(wal_file.path())
+                    .open(&path)
                     .map_err(|e| {
                         MoraError::StorageError(StorageError::FileReadFailed(e.to_string()))
                     })?;
-                storage.wals.insert(
-                    wal_file
-                        .file_name()
-                        .to_string_lossy()
-                        .to_string()
-                        .replace(".wal", ""),
-                    BufWriter::new(file_handle),
+
+                storage.replay_wal(container_id, &mut file)?;
+
+                // Reopen for appending
+                let file = OpenOptions::new()
+                    .append(true)
+                    .open(&path)
+                    .map_err(|e| {
+                        MoraError::StorageError(StorageError::FileReadFailed(e.to_string()))
+                    })?;
+
+                storage.write_handles.insert(
+                    container_id.to_string(),
+                    BufWriter::new(file),
                 );
             }
         }
@@ -138,160 +456,141 @@ impl Storage for WalFileStorage {
         Ok(storage)
     }
 
-    // create_container(&container_id)
-    // Create an empty WAL file for the container if it doesn't exist.
-    //
-    //   create_container(id)
-    //        │
-    //        ▼
-    //   wal_path directory exists? ── yes ─▶ go through the flow
-    //        │ no
-    //        ▼
-    //   create directory -> create file -> insert handle in self.wals -> Ok(())
-    //        │
-    //        ▼
-    //   wal_path/id.wal exists? ── yes ─▶ Err(MoraError::StorageError(ContainerAlreadyExists(id)))
-    //        │ no
-    //        ▼
-    //   create file -> insert handle in self.wals -> Ok(())
     fn create_container(&mut self, container_id: &Self::ContainerId) -> MoraResult<()> {
-        if self.wals.contains_key(container_id) {
+        if self.index.contains_key(container_id) {
             return Err(MoraError::StorageError(
-                StorageError::ContainerAlreadyExists(container_id.to_string()),
+                StorageError::ContainerAlreadyExists(container_id.clone()),
             ));
         }
 
-        if Path::new(&format!("{}/{}", self.wal_path, container_id)).exists() {
+        let wal_path = self.container_wal_path(container_id);
+        if wal_path.exists() {
             return Err(MoraError::StorageError(
-                StorageError::ContainerAlreadyExists(container_id.to_string()),
+                StorageError::ContainerAlreadyExists(container_id.clone()),
             ));
         }
 
-        let file = File::create(format!("{}/{}", self.wal_path, container_id)).map_err(|e| {
+        // Create empty WAL file
+        let file = File::create(&wal_path).map_err(|e| {
             MoraError::StorageError(StorageError::ContainerCreationFailed(e.to_string()))
         })?;
 
-        self.wals.insert(container_id.clone(), BufWriter::new(file));
+        // Initialize structures
+        self.index.insert(container_id.clone(), HashMap::new());
+        self.write_handles.insert(container_id.clone(), BufWriter::new(file));
+        self.stats.container_record_counts.insert(container_id.clone(), 0);
+
+        debug!("Created container: {}", container_id);
         Ok(())
     }
 
-    // delete_container(&container_id)
-    // Remove container WAL (logically: close handle, delete file).
-    //
-    //   delete_container(id)
-    //        │
-    //        ▼
-    //   close handle (if open)
-    //        │
-    //        ▼
-    //   fs remove wal_path/id.wal -> Ok(())
     fn delete_container(&mut self, container_id: &Self::ContainerId) -> MoraResult<()> {
-        let file = self
-            .wals
-            .get_mut(container_id)
-            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
-                container_id.to_string(),
-            )))?;
-        file.flush().map_err(|e| {
+        // Remove from memory
+        self.index.remove(container_id);
+        self.stats.container_record_counts.remove(container_id);
+
+        // Close and remove file
+        if let Some(mut writer) = self.write_handles.remove(container_id) {
+            writer.flush().map_err(|e| {
+                MoraError::StorageError(StorageError::ContainerDeletionFailed(e.to_string()))
+            })?;
+        }
+
+        let wal_path = self.container_wal_path(container_id);
+        std::fs::remove_file(&wal_path).map_err(|e| {
             MoraError::StorageError(StorageError::ContainerDeletionFailed(e.to_string()))
         })?;
 
-        std::fs::remove_file(format!("{}/{}", self.wal_path, container_id)).map_err(|e| {
-            MoraError::StorageError(StorageError::ContainerDeletionFailed(e.to_string()))
-        })?;
-
-        self.wals.remove(container_id);
+        debug!("Deleted container: {}", container_id);
         Ok(())
     }
 
-    // list_containers()
-    // List known containers (by scanning directory or tracking opened handles).
-    //
-    //   list_containers()
-    //        │
-    //        ▼
-    //   scan wal_path/*.wal -> collect ids -> return slice/collection
     fn list_containers(&self) -> MoraResult<Vec<Self::ContainerId>> {
-        Ok(self.wals.keys().cloned().collect())
+        Ok(self.index.keys().cloned().collect())
     }
 
-    // delete_item(&container_id, &sort_key)
-    // Append a tombstone record for the key.
-    //
-    //   delete_item(id, k)
-    //        │
-    //        ▼
-    //   seek end -> write [key_len|key|item_len=0|<tombstone-flag>]
-    //        │
-    //        ▼
-    //   flush -> Ok(())
     fn delete_item(
         &mut self,
         container_id: &Self::ContainerId,
         item_sort_key: &Self::SortKey,
     ) -> MoraResult<()> {
-        let file_buffer = self
-            .wals
-            .get_mut(container_id)
-            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
-                container_id.to_string(),
-            )))?
-            .get_mut();
+        // Remove from index
+        let container_index = self.index.get_mut(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.clone()))
+        })?;
+        container_index.remove(item_sort_key);
 
-        let mut buffer = Vec::with_capacity(SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES);
-        insert_delete_item_op_to_buffer(&mut buffer, *item_sort_key);
-        file_buffer
-            .write_all(&buffer)
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        // Append tombstone to WAL
+        let record = Self::encode_tombstone_record(*item_sort_key);
+        self.append_record(container_id, &record)?;
 
-        file_buffer
-            .flush()
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        self.stats.total_tombstones += 1;
+        if let Some(count) = self.stats.container_record_counts.get_mut(container_id) {
+            *count += 1;
+        }
+
+        // Check if compaction is needed
+        if self.stats.should_compact(container_id) {
+            debug!("Triggering compaction for container: {}", container_id);
+            self.compact_container(container_id)?;
+        }
 
         Ok(())
     }
 
-    // store_item(&container_id, &sort_key, &item)
-    // Enqueue by appending a framed record at EOF.
-    //
-    //   store_item(id, k, v)
-    //        │
-    //        ▼
-    //   ensure wal file exists -> open handle
-    //        │
-    //        ▼
-    //   append [key_len|key|item_len|item]
-    //        │
-    //        ▼
-    //   flush/fsync -> Ok(())
     fn store_item(
         &mut self,
         container_id: &Self::ContainerId,
         item_sort_key: &Self::SortKey,
         item: &Self::Item,
     ) -> MoraResult<()> {
-        let file_buffer = self
-            .wals
-            .get_mut(container_id)
-            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
-                container_id.to_string(),
-            )))?
-            .get_mut();
+        // Update index
+        let container_index = self.index.get_mut(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.clone()))
+        })?;
+        container_index.insert(*item_sort_key, item.clone());
 
-        let mut buffer = Vec::new();
-        insert_add_item_op_to_buffer(&mut buffer, *item_sort_key, item);
+        // Append to WAL
+        let record = Self::encode_item_record(*item_sort_key, item);
+        self.append_record(container_id, &record)?;
 
-        file_buffer
-            .seek(std::io::SeekFrom::End(0))
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        self.stats.total_writes += 1;
+        if let Some(count) = self.stats.container_record_counts.get_mut(container_id) {
+            *count += 1;
+        }
 
-        file_buffer
-            .write_all(&buffer)
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        Ok(())
+    }
 
-        file_buffer
-            .flush()
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+    fn store_items(
+        &mut self,
+        container_id: &Self::ContainerId,
+        items: &[(Self::SortKey, Self::Item)],
+    ) -> MoraResult<()> {
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        // Update index
+        let container_index = self.index.get_mut(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.clone()))
+        })?;
+
+        // Build batch of records
+        let mut batch = Vec::new();
+        for (sort_key, item) in items {
+            container_index.insert(*sort_key, item.clone());
+            let record = Self::encode_item_record(*sort_key, item);
+            batch.extend_from_slice(&record);
+        }
+
+        // Single append + sync for entire batch
+        self.append_record(container_id, &batch)?;
+
+        self.stats.total_writes += items.len() as u64;
+        if let Some(count) = self.stats.container_record_counts.get_mut(container_id) {
+            *count += items.len() as u64;
+        }
 
         Ok(())
     }
@@ -300,69 +599,13 @@ impl Storage for WalFileStorage {
         &mut self,
         container_id: &Self::ContainerId,
     ) -> MoraResult<HashMap<Self::SortKey, Self::Item>> {
-        let file_buffer = self
-            .wals
-            .get_mut(container_id)
-            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
-                container_id.to_string(),
-            )))?
-            .get_mut();
-
-        let mut items = HashMap::new();
-        let mut buffer = [0_u8; SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES];
-        let mut offset = 0;
-        while let Ok(_) = file_buffer
-            .seek(std::io::SeekFrom::Start(offset))
-            .and_then(|_| file_buffer.read_exact(&mut buffer))
-        {
-            // read header frame into separate variables
-            let sort_key = &buffer[..SORT_KEY_BYTES];
-            let mut sort_key_bytes_buf = [0; SORT_KEY_BYTES];
-            sort_key_bytes_buf.copy_from_slice(&sort_key);
-            let sort_key_u128 = u128::from_le_bytes(sort_key_bytes_buf);
-            dbg!("sort_key_u128: {:?}", sort_key_u128);
-
-            let item_descriptor_bytes =
-                &buffer[SORT_KEY_BYTES..SORT_KEY_BYTES + ITEM_DESCRIPTOR_BYTES];
-            dbg!("item_descriptor_bytes: {:?}", item_descriptor_bytes);
-            offset += buffer.len() as u64;
-
-            match Into::<ItemDescriptor>::into(item_descriptor_bytes) {
-                ItemDescriptor::Item => {
-                    let mut item_length_buffer = [0_u8; ITEM_LENGTH_BYTES];
-                    file_buffer
-                        .seek(std::io::SeekFrom::Start(offset))
-                        .and_then(|_| file_buffer.read_exact(&mut item_length_buffer))
-                        .map_err(|e| {
-                            MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
-                        })?;
-                    offset += item_length_buffer.len() as u64;
-                    let item_length =
-                        u64::from_le_bytes(item_length_buffer.try_into().map_err(|_| {
-                            MoraError::StorageError(StorageError::ItemReadFailed(
-                                "invalid item length".to_string(),
-                            ))
-                        })?);
-                    dbg!("item_length: {:?}", item_length);
-                    // read item into separate buffer
-                    let mut item_buffer = vec![0_u8; item_length as usize];
-                    file_buffer
-                        .seek(std::io::SeekFrom::Start(offset))
-                        .and_then(|_| file_buffer.read_exact(&mut item_buffer))
-                        .map_err(|e| {
-                            MoraError::StorageError(StorageError::ItemReadFailed(e.to_string()))
-                        })?;
-                    offset += item_buffer.len() as u64;
-                    dbg!("item_buffer: {:?}", &item_buffer);
-                    items.insert(sort_key_u128, item_buffer);
-                }
-                ItemDescriptor::Tombstone => {
-                    items.remove(&sort_key_u128);
-                }
-            }
-        }
-
-        Ok(items)
+        // O(1) lookup from in-memory index!
+        self.index
+            .get(container_id)
+            .cloned()
+            .ok_or_else(|| {
+                MoraError::StorageError(StorageError::ContainerNotFound(container_id.clone()))
+            })
     }
 
     fn delete_items(
@@ -370,39 +613,37 @@ impl Storage for WalFileStorage {
         container_id: &Self::ContainerId,
         item_sort_keys: &[Self::SortKey],
     ) -> MoraResult<()> {
-        let file_buffer = self
-            .wals
-            .get_mut(container_id)
-            .ok_or(MoraError::StorageError(StorageError::ContainerNotFound(
-                container_id.to_string(),
-            )))?
-            .get_mut();
+        if item_sort_keys.is_empty() {
+            return Ok(());
+        }
 
-        let mut buffer = Vec::new();
-        item_sort_keys
-            .iter()
-            .for_each(|key| insert_delete_item_op_to_buffer(&mut buffer, *key));
+        // Update index
+        let container_index = self.index.get_mut(container_id).ok_or_else(|| {
+            MoraError::StorageError(StorageError::ContainerNotFound(container_id.clone()))
+        })?;
 
-        file_buffer
-            .write_all(&buffer)
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        // Build batch of tombstones
+        let mut batch = Vec::new();
+        for sort_key in item_sort_keys {
+            container_index.remove(sort_key);
+            let record = Self::encode_tombstone_record(*sort_key);
+            batch.extend_from_slice(&record);
+        }
 
-        file_buffer
-            .flush()
-            .map_err(|e| MoraError::StorageError(StorageError::ItemWriteFailed(e.to_string())))?;
+        // Single append + sync for entire batch
+        self.append_record(container_id, &batch)?;
+
+        self.stats.total_tombstones += item_sort_keys.len() as u64;
+        if let Some(count) = self.stats.container_record_counts.get_mut(container_id) {
+            *count += item_sort_keys.len() as u64;
+        }
+
+        // Check if compaction is needed
+        if self.stats.should_compact(container_id) {
+            debug!("Triggering compaction for container: {}", container_id);
+            self.compact_container(container_id)?;
+        }
 
         Ok(())
     }
-}
-
-fn insert_delete_item_op_to_buffer(buffer: &mut Vec<u8>, key: u128) {
-    buffer.extend_from_slice(&key.to_le_bytes());
-    buffer.push(ItemDescriptor::Tombstone as u8);
-}
-
-fn insert_add_item_op_to_buffer(buffer: &mut Vec<u8>, key: u128, item: &[u8]) {
-    buffer.extend_from_slice(&key.to_le_bytes());
-    buffer.push(ItemDescriptor::Item.into());
-    buffer.extend_from_slice(&item.len().to_le_bytes());
-    buffer.extend_from_slice(item);
 }

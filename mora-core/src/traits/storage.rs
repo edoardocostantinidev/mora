@@ -40,6 +40,17 @@ pub trait Storage {
         item: &Self::Item,
     ) -> MoraResult<()>;
 
+    /// Stores multiple items in a single batch operation.
+    /// This is more efficient than calling store_item multiple times.
+    fn store_items(
+        &mut self,
+        container_id: &Self::ContainerId,
+        items: &[(Self::SortKey, Self::Item)],
+    ) -> MoraResult<()>
+    where
+        Self::SortKey: Clone,
+        Self::Item: Clone;
+
     /// Get all items in a container.
     fn get_all_items(
         &mut self,

@@ -4,7 +4,7 @@ use serde::Serialize;
 
 pub type ConnectionId = String;
 
-const CONNECTION_TIMEOUT_IN_MSEC: i64 = 5000;
+pub const CONNECTION_TIMEOUT_IN_MSEC: i64 = 5000;
 
 #[derive(Debug, Clone, Default)]
 pub struct Connections {
@@ -19,8 +19,8 @@ impl Connections {
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Client {
-    ip: String,
-    last_activity: i64,
+    pub ip: String,
+    pub last_activity: i64,
 }
 
 impl Connections {

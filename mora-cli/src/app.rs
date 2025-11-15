@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use crate::selectable::Selectable;
 use crate::widgets::channel_panel::ChannelPanelWidget;
-use crate::widgets::connection_panel::ConnectionPanelWidget;
 use crate::widgets::queue_panel::QueuePanelWidget;
 use crate::widgets::server_status::ServerStatusWidget;
 use color_eyre::Result;
@@ -17,7 +16,6 @@ use tokio_stream::StreamExt;
 pub struct App {
     should_quit: bool,
     server_status: ServerStatusWidget,
-    connection_panel: ConnectionPanelWidget,
     channel_panel: ChannelPanelWidget,
     queue_panel: QueuePanelWidget,
     selected_panel: SelectedPanel,
@@ -27,7 +25,6 @@ pub struct App {
 enum SelectedPanel {
     Queue,
     Channel,
-    Connection,
 }
 
 impl App {
@@ -37,7 +34,6 @@ impl App {
         Self {
             should_quit: false,
             server_status: ServerStatusWidget::new(mora_client),
-            connection_panel: ConnectionPanelWidget::new(mora_client),
             channel_panel: ChannelPanelWidget::new(mora_client),
             queue_panel: QueuePanelWidget::new(mora_client),
             selected_panel: SelectedPanel::Queue,
@@ -46,7 +42,6 @@ impl App {
 
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         self.server_status.run();
-        self.connection_panel.run();
         self.queue_panel.run();
         self.channel_panel.run();
 
@@ -93,14 +88,8 @@ impl App {
             ])
             .split(main_layout[0]);
 
-        let lower_bar = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(main_layout[1]);
-
         frame.render_widget(block, outer_layout[0]);
-        frame.render_widget(&self.server_status, lower_bar[0]);
-        frame.render_widget(&self.connection_panel, lower_bar[1]);
+        frame.render_widget(&self.server_status, main_layout[1]);
         frame.render_widget(&self.queue_panel, central_layout[0]);
         frame.render_widget(&self.channel_panel, central_layout[1]);
     }
@@ -119,11 +108,6 @@ impl App {
                         }
                         SelectedPanel::Channel => {
                             self.channel_panel.set_selected(false);
-                            self.connection_panel.set_selected(true);
-                            SelectedPanel::Connection
-                        }
-                        SelectedPanel::Connection => {
-                            self.connection_panel.set_selected(false);
                             self.queue_panel.set_selected(true);
                             SelectedPanel::Queue
                         }
