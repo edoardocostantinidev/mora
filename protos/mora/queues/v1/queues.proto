@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package mora.queues.v1;
+
+// Empty request for listing all queues.
+message ListQueuesRequest {}
+
+// Represents a queue with its metadata.
+message Queue {
+    string id = 1;
+    uint64 pending_events_count = 2;
+}
+
+// Response containing a list of queues.
+message ListQueuesResponse {
+    repeated Queue queues = 1;
+}
+
+// Request to get a specific queue by ID.
+message GetQueueRequest {
+    string queue_id = 1;
+}
+
+// Response for a single queue.
+message GetQueueResponse {
+    string id = 1;
+    uint64 pending_events_count = 2;
+}
+
+// Request to create a new queue.
+message CreateQueueRequest {
+    string id = 1;
+}
+
+// Response after creating a queue.
+message CreateQueueResponse {
+    string id = 1;
+    uint64 pending_events_count = 2;
+}
+
+// Request to delete a queue by ID.
+message DeleteQueueRequest {
+    string queue_id = 1;
+}
+
+// Response after deleting a queue.
+message DeleteQueueResponse {
+    string message = 1;
+}
+
+service QueueService {
+    // List all queues.
+    rpc ListQueues (ListQueuesRequest) returns (ListQueuesResponse);
+
+    // Get a specific queue by ID.
+    rpc GetQueue (GetQueueRequest) returns (GetQueueResponse);
+
+    // Create a new queue.
+    rpc CreateQueue (CreateQueueRequest) returns (CreateQueueResponse);
+
+    // Delete a queue by ID.
+    rpc DeleteQueue (DeleteQueueRequest) returns (DeleteQueueResponse);
+}
