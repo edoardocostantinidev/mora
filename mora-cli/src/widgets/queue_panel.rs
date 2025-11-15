@@ -34,8 +34,11 @@ impl QueuePanelWidget {
     pub fn move_up(&self) {
         let mut state = self.state.write().unwrap();
         if let ViewMode::List = state.view_mode {
-            if state.selected_index > 0 {
-                state.selected_index -= 1;
+            // Only allow navigation when queues are loaded
+            if matches!(state.loading_state, LoadingState::Loaded(_)) && !state.queues.is_empty() {
+                if state.selected_index > 0 {
+                    state.selected_index -= 1;
+                }
             }
         }
     }
@@ -43,23 +46,31 @@ impl QueuePanelWidget {
     pub fn move_down(&self) {
         let mut state = self.state.write().unwrap();
         if let ViewMode::List = state.view_mode {
-            let max_index = state.queues.len().saturating_sub(1);
-            if state.selected_index < max_index {
-                state.selected_index += 1;
+            // Only allow navigation when queues are loaded
+            if matches!(state.loading_state, LoadingState::Loaded(_)) && !state.queues.is_empty() {
+                let max_index = state.queues.len().saturating_sub(1);
+                if state.selected_index < max_index {
+                    state.selected_index += 1;
+                }
             }
         }
     }
 
     pub fn drill_in(&self) {
-        let this = self.clone();
+        let mut this = self.clone();
         tokio::spawn(async move {
             let queue_id = {
                 let mut state = this.state.write().unwrap();
+                // Only drill in when queues are loaded
                 if let ViewMode::List = state.view_mode {
-                    if let Some(queue) = state.queues.get(state.selected_index) {
-                        let queue_id = queue.id.clone();
-                        state.view_mode = ViewMode::LoadingEvents;
-                        Some(queue_id)
+                    if matches!(state.loading_state, LoadingState::Loaded(_)) {
+                        if let Some(queue) = state.queues.get(state.selected_index) {
+                            let queue_id = queue.id.clone();
+                            state.view_mode = ViewMode::LoadingEvents;
+                            Some(queue_id)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
@@ -107,6 +118,60 @@ impl QueuePanelWidget {
             state.view_mode = ViewMode::List;
         }
     }
+
+    pub fn request_delete(&self) {
+        let mut state = self.state.write().unwrap();
+        // Only allow delete when queues are loaded
+        if let ViewMode::List = state.view_mode {
+            if matches!(state.loading_state, LoadingState::Loaded(_)) {
+                if let Some(queue) = state.queues.get(state.selected_index) {
+                    state.view_mode = ViewMode::ConfirmDelete(queue.id.clone());
+                }
+            }
+        }
+    }
+
+    pub fn confirm_delete(&self) {
+        let mut this = self.clone();
+        tokio::spawn(async move {
+            let queue_id = {
+                let mut state = this.state.write().unwrap();
+                if let ViewMode::ConfirmDelete(queue_id) = &state.view_mode {
+                    let queue_id = queue_id.clone();
+                    state.view_mode = ViewMode::DeletingQueue(queue_id.clone());
+                    Some(queue_id)
+                } else {
+                    None
+                }
+            };
+
+            if let Some(queue_id) = queue_id {
+                match this.mora_client.delete_queue(queue_id.clone()).await {
+                    Ok(_) => {
+                        let mut state = this.state.write().unwrap();
+                        // Remove the queue from the list
+                        state.queues.retain(|q| q.id != queue_id);
+                        // Adjust selected index if needed
+                        if state.selected_index >= state.queues.len() && state.selected_index > 0 {
+                            state.selected_index = state.queues.len() - 1;
+                        }
+                        state.view_mode = ViewMode::List;
+                    }
+                    Err(e) => {
+                        let mut state = this.state.write().unwrap();
+                        state.view_mode = ViewMode::DeleteError(e.to_string());
+                    }
+                }
+            }
+        });
+    }
+
+    pub fn cancel_delete(&self) {
+        let mut state = self.state.write().unwrap();
+        if matches!(state.view_mode, ViewMode::ConfirmDelete(_)) {
+            state.view_mode = ViewMode::List;
+        }
+    }
 }
 
 impl Selectable for QueuePanelWidget {
@@ -125,6 +190,9 @@ enum ViewMode {
     LoadingEvents,
     ViewingEvents(String, Vec<Event>),
     EventsError(String),
+    ConfirmDelete(String), // queue_id to delete
+    DeletingQueue(String), // queue_id being deleted
+    DeleteError(String),   // error message
 }
 
 impl Default for ViewMode {
@@ -154,8 +222,8 @@ enum LoadingState {
 const REFRESH_INTERVAL_IN_MSEC: u64 = 500;
 
 impl QueuePanelWidget {
-    pub fn run(&self) {
-        let this = self.clone();
+    pub fn run(&mut self) {
+        let mut this = self.clone();
         tokio::spawn(async move {
             loop {
                 this.fetch_status().await;
@@ -164,10 +232,16 @@ impl QueuePanelWidget {
         });
     }
 
-    async fn fetch_status(&self) {
-        if !self.state.read().unwrap().already_fetched_once {
-            let mut state = self.state.write().unwrap();
-            state.loading_state = LoadingState::Loading;
+    async fn fetch_status(&mut self) {
+        let already_fetched = match self.state.read() {
+            Ok(state) => state.already_fetched_once,
+            Err(poisoned) => poisoned.into_inner().already_fetched_once,
+        };
+
+        if !already_fetched {
+            if let Ok(mut state) = self.state.write() {
+                state.loading_state = LoadingState::Loading;
+            }
         }
 
         let queues_result = self.mora_client.get_queues().await;
@@ -182,22 +256,30 @@ impl QueuePanelWidget {
     }
 
     fn on_load(&self, queues: Vec<Queue>) {
-        let mut state = self.state.write().unwrap();
-        state.already_fetched_once = true;
-        state.queues = queues.clone();
-        state.loading_state = LoadingState::Loaded(queues);
+        if let Ok(mut state) = self.state.write() {
+            state.already_fetched_once = true;
+            state.queues = queues.clone();
+            state.loading_state = LoadingState::Loaded(queues);
+        }
     }
 
     fn on_err(&self, err: &MoraError) {
-        let mut state = self.state.write().unwrap();
-        state.already_fetched_once = true;
-        state.loading_state = LoadingState::Error(err.to_string());
+        if let Ok(mut state) = self.state.write() {
+            state.already_fetched_once = true;
+            state.loading_state = LoadingState::Error(err.to_string());
+            // Reset selected index when entering error state
+            state.selected_index = 0;
+        }
     }
 }
 
 impl Widget for &QueuePanelWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let state = self.state.read().unwrap();
+        // Handle poisoned lock gracefully
+        let state = match self.state.read() {
+            Ok(state) => state,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         let color = ratatui::style::Color::LightBlue;
 
         let modifier = if self.is_selected() {
@@ -209,7 +291,7 @@ impl Widget for &QueuePanelWidget {
         match &state.view_mode {
             ViewMode::List => {
                 let block = Block::bordered()
-                    .title("Queues (j/k: navigate, Enter: view events)")
+                    .title("Queues (j/k: navigate, Enter: view events, Backspace: delete)")
                     .border_style(Style::default().fg(color))
                     .border_type(ratatui::widgets::BorderType::Rounded)
                     .add_modifier(modifier);
@@ -262,8 +344,12 @@ impl Widget for &QueuePanelWidget {
                     .split(area);
 
                 let mut list_state = ListState::default();
-                if self.is_selected() {
-                    list_state.select(Some(state.selected_index));
+                // Only set selection when we have loaded queues and the panel is selected
+                if self.is_selected() && matches!(state.loading_state, LoadingState::Loaded(_)) {
+                    // Ensure selected_index is within bounds
+                    if state.selected_index < state.queues.len() {
+                        list_state.select(Some(state.selected_index));
+                    }
                 }
 
                 let list = List::new(items)
@@ -365,6 +451,54 @@ impl Widget for &QueuePanelWidget {
                     .add_modifier(modifier);
 
                 let paragraph = Paragraph::new(format!("Error loading events: {err}"))
+                    .block(block)
+                    .alignment(Alignment::Center)
+                    .wrap(Wrap { trim: false });
+
+                paragraph.render(area, buf);
+            }
+            ViewMode::ConfirmDelete(queue_id) => {
+                let block = Block::bordered()
+                    .title("Confirm Delete")
+                    .border_style(Style::default().fg(ratatui::style::Color::Red))
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .add_modifier(modifier);
+
+                let text = format!(
+                    "Are you sure you want to delete queue '{}'?\n\n\
+                     This action cannot be undone.\n\n\
+                     Press 'y' to confirm or 'n' to cancel",
+                    queue_id
+                );
+
+                let paragraph = Paragraph::new(text)
+                    .block(block)
+                    .alignment(Alignment::Center)
+                    .wrap(Wrap { trim: false });
+
+                paragraph.render(area, buf);
+            }
+            ViewMode::DeletingQueue(queue_id) => {
+                let block = Block::bordered()
+                    .title("Deleting Queue...")
+                    .border_style(Style::default().fg(ratatui::style::Color::Yellow))
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .add_modifier(modifier);
+
+                let paragraph = Paragraph::new(format!("Deleting queue '{}'... 🟡", queue_id))
+                    .block(block)
+                    .alignment(Alignment::Center);
+
+                paragraph.render(area, buf);
+            }
+            ViewMode::DeleteError(err) => {
+                let block = Block::bordered()
+                    .title("Delete Error (Esc: back)")
+                    .border_style(Style::default().fg(ratatui::style::Color::Red))
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .add_modifier(modifier);
+
+                let paragraph = Paragraph::new(format!("Error deleting queue: {err}"))
                     .block(block)
                     .alignment(Alignment::Center)
                     .wrap(Wrap { trim: false });

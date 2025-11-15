@@ -20,6 +20,8 @@ pub enum MoraError {
     GenericError(String),
     #[error("connection error: `{0}`")]
     ConnectionError(String),
+    #[error("not connected to the server")]
+    NotConnected,
     #[error("queue full")]
     QueueFull,
     #[error("file error: `{0}`")]

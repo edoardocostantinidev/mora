@@ -60,7 +60,7 @@ const REFRESH_INTERVAL_IN_MSEC: u64 = 500;
 
 impl ChannelPanelWidget {
     pub fn run(&self) {
-        let this = self.clone();
+        let mut this = self.clone();
         tokio::spawn(async move {
             loop {
                 this.fetch_status().await;
@@ -69,7 +69,7 @@ impl ChannelPanelWidget {
         });
     }
 
-    async fn fetch_status(&self) {
+    async fn fetch_status(&mut self) {
         if !self.state.read().unwrap().already_fetched_once {
             let mut state = self.state.write().unwrap();
             state.loading_state = LoadingState::Loading;

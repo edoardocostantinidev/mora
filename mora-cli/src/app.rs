@@ -136,6 +136,21 @@ impl App {
                         self.queue_panel.drill_in();
                     }
                 }
+                KeyCode::Backspace => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.request_delete();
+                    }
+                }
+                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.confirm_delete();
+                    }
+                }
+                KeyCode::Char('n') | KeyCode::Char('N') => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.cancel_delete();
+                    }
+                }
                 _ => {}
             }
         }
