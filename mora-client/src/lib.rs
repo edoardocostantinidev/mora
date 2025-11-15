@@ -1,6 +1,7 @@
 use mora_core::{
     models::{
         channels::ListChannelsResponse,
+        events::Event,
         health::{ClusterStatus, ClusterStatusData},
         queues::ListQueuesResponse,
     },
@@ -8,7 +9,10 @@ use mora_core::{
 };
 
 use mora_proto::{
-    channels::{channel_service_client::ChannelServiceClient, ListChannelsRequest},
+    channels::{
+        channel_service_client::ChannelServiceClient, BufferOptions, CreateChannelRequest,
+        DeleteChannelRequest, GetChannelEventsRequest, ListChannelsRequest,
+    },
     health::{
         health_check_response::Status, health_service_client::HealthServiceClient,
         ClusterStatusData as ProtoClusterStatusData, HealthCheckRequest,
@@ -116,5 +120,67 @@ impl MoraClient {
             .collect();
 
         Ok(ListChannelsResponse { channels })
+    }
+
+    pub async fn create_channel(
+        &self,
+        queues: Vec<String>,
+        buffer_size: u64,
+        buffer_time: u64,
+    ) -> MoraResult<String> {
+        let response = self
+            .clone()
+            .channel_client
+            .create_channel(CreateChannelRequest {
+                queues,
+                buffer_options: Some(BufferOptions {
+                    size: buffer_size,
+                    time: buffer_time,
+                }),
+            })
+            .await
+            .map_err(|e| MoraError::GenericError(e.to_string()))?
+            .into_inner();
+
+        Ok(response.channel_id)
+    }
+
+    pub async fn delete_channel(&self, channel_id: String) -> MoraResult<()> {
+        self.clone()
+            .channel_client
+            .delete_channel(DeleteChannelRequest { channel_id })
+            .await
+            .map_err(|e| MoraError::GenericError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub async fn get_channel_events(
+        &self,
+        channel_id: String,
+        delete: bool,
+    ) -> MoraResult<Vec<Event>> {
+        let response = self
+            .clone()
+            .channel_client
+            .get_channel_events(GetChannelEventsRequest { channel_id, delete })
+            .await
+            .map_err(|e| MoraError::GenericError(e.to_string()))?
+            .into_inner();
+
+        let events = response
+            .events
+            .into_iter()
+            .map(|e| Event {
+                timestamp: e
+                    .timestamp
+                    .parse::<u128>()
+                    .unwrap_or(0),
+                queue_name: e.queue_name,
+                data: e.data,
+            })
+            .collect();
+
+        Ok(events)
     }
 }

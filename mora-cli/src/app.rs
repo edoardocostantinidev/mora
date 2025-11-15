@@ -97,7 +97,15 @@ impl App {
     fn handle_event(&mut self, event: &Event) {
         if let Some(key) = event.as_key_press_event() {
             match key.code {
-                KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
+                KeyCode::Char('q') => self.should_quit = true,
+                KeyCode::Esc => {
+                    // If in queue panel and viewing events, go back to list
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.go_back();
+                    } else {
+                        self.should_quit = true;
+                    }
+                }
                 KeyCode::Tab => {
                     self.selected_panel = match self.selected_panel {
                         //tab moves panel
@@ -111,6 +119,21 @@ impl App {
                             self.queue_panel.set_selected(true);
                             SelectedPanel::Queue
                         }
+                    }
+                }
+                KeyCode::Char('j') | KeyCode::Down => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.move_down();
+                    }
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.move_up();
+                    }
+                }
+                KeyCode::Enter => {
+                    if matches!(self.selected_panel, SelectedPanel::Queue) {
+                        self.queue_panel.drill_in();
                     }
                 }
                 _ => {}

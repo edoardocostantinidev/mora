@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Event {
+    pub timestamp: u128,
+    pub queue_name: String,
+    pub data: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ScheduleEventRequest {
     data: String,
